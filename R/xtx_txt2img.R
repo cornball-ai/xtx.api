@@ -1,42 +1,65 @@
 #' Generate Image from Text
 #'
-#' Generate an image from a text prompt using DALL-E or compatible API.
+#' Generate an image from a text prompt using DALL-E API or local diffusion models.
 #'
 #' @param prompt Character. The text description of the image to generate.
-#' @param model Character. The model to use. Options: "dall-e-3", "dall-e-2".
-#'   Default is "dall-e-3".
+#' @param backend Character. Which backend to use: "openai" for DALL-E API,
+#'   "diffuser" for local diffuseR models, or "auto" to use diffuser if available.
+#' @param model Character. The model to use. For OpenAI: "dall-e-3", "dall-e-2".
+#'   For diffuseR: "sd21", "sdxl".
+#' @param negative_prompt Character or NULL. Negative prompt (diffuseR only).
 #' @param size Character. Image dimensions. For DALL-E 3: "1024x1024",
 #'   "1024x1792", "1792x1024". For DALL-E 2: "256x256", "512x512", "1024x1024".
+#'   For diffuseR: "512x512", "768x768", "1024x1024".
 #' @param quality Character. Image quality. "standard" or "hd" (DALL-E 3 only).
 #' @param style Character. Image style. "vivid" or "natural" (DALL-E 3 only).
-#' @param n Integer. Number of images to generate (1 for DALL-E 3, 1-10 for DALL-E 2).
-#' @param response_format Character. "url" or "b64_json". Default is "url".
+#' @param n Integer. Number of images to generate (OpenAI only).
+#' @param steps Integer. Number of inference steps (diffuseR only). Default 50.
+#' @param guidance_scale Numeric. CFG scale (diffuseR only). Default 7.5.
+#' @param seed Integer or NULL. Random seed for reproducibility (diffuseR only).
+#' @param devices Character or list. Device configuration for diffuseR.
+#'   "cpu", "cuda", or list like \code{list(unet = "cuda", decoder = "cpu")}.
+#' @param response_format Character. "url" or "b64_json" (OpenAI only).
 #' @param file Character or NULL. If provided, save the image to this path.
 #'
-#' @return A list containing:
-#'   \item{url}{The URL of the generated image (if response_format = "url")}
-#'   \item{b64_json}{Base64-encoded image data (if response_format = "b64_json")}
-#'   \item{revised_prompt}{The prompt after DALL-E 3 revision (if applicable)}
+#' @return A list containing the generated image data. Structure varies by backend:
+#'   \itemize{
+#'     \item OpenAI: \code{data[[1]]$url} or \code{data[[1]]$b64_json}
+#'     \item diffuseR: \code{data[[1]]$image} (array), \code{metadata}
+#'   }
 #'
 #' @examples
 #' \dontrun{
+#' # Using OpenAI DALL-E
 #' xtx_set_api_key("sk-...")
-#'
-#' # Generate an image
 #' result <- xtx_txt2img("A white cat sitting on a windowsill")
 #' browseURL(result$data[[1]]$url)
 #'
-#' # Generate and save to file
+#' # Using local diffuseR
+#' result <- xtx_txt2img(
+#'   "A white cat sitting on a windowsill",
+#'   backend = "diffuser",
+#'   model = "sd21",
+#'   devices = "cuda"
+#' )
+#'
+#' # Save to file
 #' xtx_txt2img("A sunset over mountains", file = "sunset.png")
 #' }
 #'
 #' @export
 xtx_txt2img <- function(prompt,
-                        model = "dall-e-3",
-                        size = "1024x1024",
+                        backend = c("openai", "diffuser", "auto"),
+                        model = NULL,
+                        negative_prompt = NULL,
+                        size = NULL,
                         quality = "standard",
                         style = "vivid",
                         n = 1,
+                        steps = 50,
+                        guidance_scale = 7.5,
+                        seed = NULL,
+                        devices = "cpu",
                         response_format = "url",
                         file = NULL) {
 
@@ -45,20 +68,76 @@ xtx_txt2img <- function(prompt,
     stop("'prompt' must be a non-empty character string", call. = FALSE)
   }
 
-  # Validate model
+  backend <- match.arg(backend)
+
+  # Auto backend selection
+  if (backend == "auto") {
+    if (.xtx_has_diffuser()) {
+      backend <- "diffuser"
+      message("Using diffuseR backend")
+    } else {
+      backend <- "openai"
+    }
+  }
+
+  # Dispatch to appropriate backend
+  if (backend == "diffuser") {
+    .xtx_txt2img_diffuser(
+      prompt = prompt,
+      model = model,
+      negative_prompt = negative_prompt,
+      size = size,
+      steps = steps,
+      guidance_scale = guidance_scale,
+      seed = seed,
+      devices = devices,
+      file = file
+    )
+  } else {
+    .xtx_txt2img_openai(
+      prompt = prompt,
+      model = model,
+      size = size,
+      quality = quality,
+      style = style,
+      n = n,
+      response_format = response_format,
+      file = file
+    )
+  }
+}
+
+#' Text-to-image via OpenAI DALL-E
+#' @keywords internal
+.xtx_txt2img_openai <- function(prompt,
+                                 model = NULL,
+                                 size = NULL,
+                                 quality = "standard",
+                                 style = "vivid",
+                                 n = 1,
+                                 response_format = "url",
+                                 file = NULL) {
+
+  # Default model
+  model <- model %||% "dall-e-3"
   model <- match.arg(model, c("dall-e-3", "dall-e-2"))
 
-  # Validate size based on model
+  # Default and validate size based on model
   valid_sizes_dalle3 <- c("1024x1024", "1024x1792", "1792x1024")
   valid_sizes_dalle2 <- c("256x256", "512x512", "1024x1024")
 
-  if (model == "dall-e-3" && !size %in% valid_sizes_dalle3) {
-    stop("For DALL-E 3, size must be one of: ",
-         paste(valid_sizes_dalle3, collapse = ", "), call. = FALSE)
-  }
-  if (model == "dall-e-2" && !size %in% valid_sizes_dalle2) {
-    stop("For DALL-E 2, size must be one of: ",
-         paste(valid_sizes_dalle2, collapse = ", "), call. = FALSE)
+  if (model == "dall-e-3") {
+    size <- size %||% "1024x1024"
+    if (!size %in% valid_sizes_dalle3) {
+      stop("For DALL-E 3, size must be one of: ",
+           paste(valid_sizes_dalle3, collapse = ", "), call. = FALSE)
+    }
+  } else {
+    size <- size %||% "1024x1024"
+    if (!size %in% valid_sizes_dalle2) {
+      stop("For DALL-E 2, size must be one of: ",
+           paste(valid_sizes_dalle2, collapse = ", "), call. = FALSE)
+    }
   }
 
   # Build request body
@@ -82,6 +161,7 @@ xtx_txt2img <- function(prompt,
 
   # Make request
   result <- .xtx_post_json("/v1/images/generations", body)
+  result$backend <- "openai"
 
   # Save to file if requested
   if (!is.null(file) && length(result$data) > 0) {
@@ -89,6 +169,79 @@ xtx_txt2img <- function(prompt,
   }
 
   result
+}
+
+#' Text-to-image via diffuseR
+#' @keywords internal
+.xtx_txt2img_diffuser <- function(prompt,
+                                   model = NULL,
+                                   negative_prompt = NULL,
+                                   size = NULL,
+                                   steps = 50,
+                                   guidance_scale = 7.5,
+                                   seed = NULL,
+                                   devices = "cpu",
+                                   file = NULL) {
+
+  if (!.xtx_has_diffuser()) {
+    stop(
+      "diffuseR package is not installed.\n",
+      "Install from local source or GitHub to use local diffusion models.",
+      call. = FALSE
+    )
+  }
+
+  # Default model
+  model <- model %||% "sd21"
+
+  # Map model names
+  diffuser_model <- switch(
+    model,
+    "sd21" = "sd21",
+    "sd2.1" = "sd21",
+    "sdxl" = "sdxl",
+    "sd-xl" = "sdxl",
+    stop("Unsupported diffuseR model: ", model, ". Use 'sd21' or 'sdxl'.", call. = FALSE)
+  )
+
+  # Default size based on model
+  if (is.null(size)) {
+    size <- if (diffuser_model == "sdxl") "1024x1024" else "768x768"
+  }
+
+  # Parse size to dimension
+  dims <- as.integer(strsplit(size, "x")[[1]])
+  img_dim <- dims[1]
+
+  # Determine save behavior
+  save_file <- !is.null(file)
+  filename <- file
+
+  # Call diffuseR::txt2img
+  result <- diffuseR::txt2img(
+    prompt = prompt,
+    model_name = diffuser_model,
+    negative_prompt = negative_prompt,
+    img_dim = img_dim,
+    devices = devices,
+    num_inference_steps = as.integer(steps),
+    guidance_scale = guidance_scale,
+    seed = seed,
+    save_file = save_file,
+    filename = filename
+  )
+
+  # Normalize return structure
+  list(
+    data = list(
+      list(
+        image = result$image,
+        revised_prompt = NULL
+      )
+    ),
+    metadata = result$metadata,
+    backend = "diffuser"
+  )
 }
 
 #' Save image from API response

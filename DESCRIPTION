@@ -22,5 +22,6 @@ Suggests:
     rmarkdown,
     devtools,
     testthat (>= 3.0.0),
-    roxygen2
+    roxygen2,
+    diffuseR
 Config/testthat/edition: 3

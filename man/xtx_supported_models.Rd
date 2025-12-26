@@ -4,16 +4,19 @@
 \alias{xtx_supported_models}
 \title{Get Supported Image Models}
 \usage{
-xtx_supported_models()
+xtx_supported_models(backend = NULL)
+}
+\arguments{
+\item{backend}{Character or NULL. Filter by backend: "openai", "diffuser", or NULL for all.}
 }
 \value{
-Character vector of model names.
+A data frame with columns: model, backend, type, description.
 }
 \description{
-Returns a character vector of known image generation models.
-This is a static list and does not query the API.
+Returns information about known image generation models by backend.
 }
 \examples{
 xtx_supported_models()
+xtx_supported_models("diffuser")
 
 }

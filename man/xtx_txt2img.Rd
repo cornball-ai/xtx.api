@@ -6,11 +6,17 @@
 \usage{
 xtx_txt2img(
   prompt,
-  model = "dall-e-3",
-  size = "1024x1024",
+  backend = c("openai", "diffuser", "auto"),
+  model = NULL,
+  negative_prompt = NULL,
+  size = NULL,
   quality = "standard",
   style = "vivid",
   n = 1,
+  steps = 50,
+  guidance_scale = 7.5,
+  seed = NULL,
+  devices = "cpu",
   response_format = "url",
   file = NULL
 )
@@ -18,40 +24,63 @@ xtx_txt2img(
 \arguments{
 \item{prompt}{Character. The text description of the image to generate.}
 
-\item{model}{Character. The model to use. Options: "dall-e-3", "dall-e-2".
-Default is "dall-e-3".}
+\item{backend}{Character. Which backend to use: "openai" for DALL-E API,
+"diffuser" for local diffuseR models, or "auto" to use diffuser if available.}
+
+\item{model}{Character. The model to use. For OpenAI: "dall-e-3", "dall-e-2".
+For diffuseR: "sd21", "sdxl".}
+
+\item{negative_prompt}{Character or NULL. Negative prompt (diffuseR only).}
 
 \item{size}{Character. Image dimensions. For DALL-E 3: "1024x1024",
-"1024x1792", "1792x1024". For DALL-E 2: "256x256", "512x512", "1024x1024".}
+"1024x1792", "1792x1024". For DALL-E 2: "256x256", "512x512", "1024x1024".
+For diffuseR: "512x512", "768x768", "1024x1024".}
 
 \item{quality}{Character. Image quality. "standard" or "hd" (DALL-E 3 only).}
 
 \item{style}{Character. Image style. "vivid" or "natural" (DALL-E 3 only).}
 
-\item{n}{Integer. Number of images to generate (1 for DALL-E 3, 1-10 for DALL-E 2).}
+\item{n}{Integer. Number of images to generate (OpenAI only).}
 
-\item{response_format}{Character. "url" or "b64_json". Default is "url".}
+\item{steps}{Integer. Number of inference steps (diffuseR only). Default 50.}
+
+\item{guidance_scale}{Numeric. CFG scale (diffuseR only). Default 7.5.}
+
+\item{seed}{Integer or NULL. Random seed for reproducibility (diffuseR only).}
+
+\item{devices}{Character or list. Device configuration for diffuseR.
+"cpu", "cuda", or list like \code{list(unet = "cuda", decoder = "cpu")}.}
+
+\item{response_format}{Character. "url" or "b64_json" (OpenAI only).}
 
 \item{file}{Character or NULL. If provided, save the image to this path.}
 }
 \value{
-A list containing:
-\item{url}{The URL of the generated image (if response_format = "url")}
-\item{b64_json}{Base64-encoded image data (if response_format = "b64_json")}
-\item{revised_prompt}{The prompt after DALL-E 3 revision (if applicable)}
+A list containing the generated image data. Structure varies by backend:
+\itemize{
+\item OpenAI: \code{data[[1]]$url} or \code{data[[1]]$b64_json}
+\item diffuseR: \code{data[[1]]$image} (array), \code{metadata}
+}
 }
 \description{
-Generate an image from a text prompt using DALL-E or compatible API.
+Generate an image from a text prompt using DALL-E API or local diffusion models.
 }
 \examples{
 \dontrun{
+# Using OpenAI DALL-E
 xtx_set_api_key("sk-...")
-
-# Generate an image
 result <- xtx_txt2img("A white cat sitting on a windowsill")
 browseURL(result$data[[1]]$url)
 
-# Generate and save to file
+# Using local diffuseR
+result <- xtx_txt2img(
+  "A white cat sitting on a windowsill",
+  backend = "diffuser",
+  model = "sd21",
+  devices = "cuda"
+)
+
+# Save to file
 xtx_txt2img("A sunset over mountains", file = "sunset.png")
 }
 

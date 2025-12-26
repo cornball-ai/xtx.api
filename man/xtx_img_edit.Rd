@@ -7,29 +7,52 @@
 xtx_img_edit(
   image,
   prompt,
+  backend = c("openai", "diffuser"),
+  model = NULL,
   mask = NULL,
-  model = "dall-e-2",
+  negative_prompt = NULL,
   size = "1024x1024",
+  strength = 0.8,
+  steps = 50,
+  guidance_scale = 7.5,
+  seed = NULL,
+  devices = "cpu",
   n = 1,
   response_format = "url",
   file = NULL
 )
 }
 \arguments{
-\item{image}{Character. Path to the input image file (PNG, max 4MB, square).}
+\item{image}{Character. Path to the input image file.}
 
-\item{prompt}{Character. The text description of the desired edit.}
+\item{prompt}{Character. The text description of the desired edit/transformation.}
 
-\item{mask}{Character or NULL. Path to mask image where transparent areas
-indicate where to edit. Must be same size as input image.}
+\item{backend}{Character. Which backend to use: "openai" or "diffuser".}
 
-\item{model}{Character. The model to use. Currently only "dall-e-2" supported.}
+\item{model}{Character. Model to use. For OpenAI: "dall-e-2".
+For diffuseR: "sd21", "sdxl".}
 
-\item{size}{Character. Output size: "256x256", "512x512", or "1024x1024".}
+\item{mask}{Character or NULL. Path to mask image (OpenAI only).
+Transparent areas indicate where to edit.}
 
-\item{n}{Integer. Number of images to generate (1-10).}
+\item{negative_prompt}{Character or NULL. Negative prompt (diffuseR only).}
 
-\item{response_format}{Character. "url" or "b64_json".}
+\item{size}{Character. Output size. For OpenAI: "256x256", "512x512", "1024x1024".
+For diffuseR: "512x512", "768x768", "1024x1024".}
+
+\item{strength}{Numeric. Transformation strength 0-1 (diffuseR only). Default 0.8.}
+
+\item{steps}{Integer. Number of inference steps (diffuseR only). Default 50.}
+
+\item{guidance_scale}{Numeric. CFG scale (diffuseR only). Default 7.5.}
+
+\item{seed}{Integer or NULL. Random seed (diffuseR only).}
+
+\item{devices}{Character or list. Device configuration (diffuseR only).}
+
+\item{n}{Integer. Number of images to generate (OpenAI only).}
+
+\item{response_format}{Character. "url" or "b64_json" (OpenAI only).}
 
 \item{file}{Character or NULL. If provided, save the first result to this path.}
 }
@@ -37,18 +60,24 @@ indicate where to edit. Must be same size as input image.}
 A list containing the generated image data.
 }
 \description{
-Edit an existing image using a text prompt and optional mask.
-Uses the DALL-E 2 edits endpoint.
+Edit an existing image using a text prompt. Uses DALL-E 2 edits endpoint
+for OpenAI backend, or diffuseR img2img for local models.
 }
 \examples{
 \dontrun{
-xtx_set_api_key("sk-...")
-
-# Edit an image
+# OpenAI edit with mask
 result <- xtx_img_edit(
   image = "photo.png",
-  prompt = "Add a red hat to the person",
+  prompt = "Add a red hat",
   mask = "mask.png"
+)
+
+# diffuseR img2img
+result <- xtx_img_edit(
+  image = "photo.png",
+  prompt = "Make it look like a painting",
+  backend = "diffuser",
+  strength = 0.7
 )
 }
 
