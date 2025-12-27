@@ -161,10 +161,18 @@ xtx_txt2img <- function(prompt,
 
   # Make request
   result <- .xtx_post_json("/v1/images/generations", body)
+
+  # Check for parse errors
+
+  if (!is.null(result$parse_error)) {
+    stop("Failed to parse API response: ", result$parse_error,
+         "\nRaw content: ", substr(result$raw_content, 1, 200), call. = FALSE)
+  }
+
   result$backend <- "openai"
 
   # Save to file if requested
-  if (!is.null(file) && length(result$data) > 0) {
+  if (!is.null(file) && !is.null(result$data) && length(result$data) > 0) {
     .xtx_save_image(result$data[[1]], file, response_format)
   }
 

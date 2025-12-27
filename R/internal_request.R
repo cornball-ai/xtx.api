@@ -79,8 +79,8 @@
     response$content
   } else {
     tryCatch(
-      jsonlite::fromJSON(rawToChar(response$content)),
-      error = function(e) rawToChar(response$content)
+      jsonlite::fromJSON(rawToChar(response$content), simplifyVector = FALSE),
+      error = function(e) list(raw_content = rawToChar(response$content), parse_error = e$message)
     )
   }
 }
@@ -149,8 +149,8 @@ curl::handle_setform(h, .list = form_data)
     response$content
   } else {
     tryCatch(
-      jsonlite::fromJSON(rawToChar(response$content)),
-      error = function(e) rawToChar(response$content)
+      jsonlite::fromJSON(rawToChar(response$content), simplifyVector = FALSE),
+      error = function(e) list(raw_content = rawToChar(response$content), parse_error = e$message)
     )
   }
 }
