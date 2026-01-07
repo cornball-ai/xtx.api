@@ -2,7 +2,7 @@ Package: xtxapi
 Title: Cross-Modal Generative Interfaces
 Version: 0.1.0
 Authors@R:
-    person("Troy", "Hernandez", email = "you@example.com", role = c("aut", "cre"))
+    person("Troy", "Hernandez", email = "troy@cornball.ai", role = c("aut", "cre"))
 Description:
     xtxapi provides a unified interface for cross-modal generative models,
     enabling transformations between text, image, audio, and video modalities.
@@ -15,6 +15,7 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
+    base64enc,
     curl,
     jsonlite
 Suggests:
@@ -23,5 +24,6 @@ Suggests:
     devtools,
     testthat (>= 3.0.0),
     roxygen2,
-    diffuseR
+    diffuseR,
+    gpuctl
 Config/testthat/edition: 3

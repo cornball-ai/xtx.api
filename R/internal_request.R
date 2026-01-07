@@ -126,8 +126,7 @@
   }
 
   # Set form data
-
-curl::handle_setform(h, .list = form_data)
+  curl::handle_setform(h, .list = form_data)
 
   # Make request
   response <- tryCatch(
@@ -153,4 +152,35 @@ curl::handle_setform(h, .list = form_data)
       error = function(e) list(raw_content = rawToChar(response$content), parse_error = e$message)
     )
   }
+}
+
+#' Save image from API response
+#' @keywords internal
+.xtx_save_image <- function(image_data, file, response_format) {
+  if (response_format == "url" && !is.null(image_data$url)) {
+    # Download from URL
+    tryCatch({
+      h <- curl::new_handle()
+      curl::handle_setopt(h, timeout = .xtx_get_timeout())
+      response <- curl::curl_fetch_memory(image_data$url, handle = h)
+      if (response$status_code == 200) {
+        writeBin(response$content, file)
+        message("Image saved to: ", file)
+      } else {
+        warning("Failed to download image: HTTP ", response$status_code, call. = FALSE)
+      }
+    }, error = function(e) {
+      warning("Failed to save image: ", e$message, call. = FALSE)
+    })
+  } else if (response_format == "b64_json" && !is.null(image_data$b64_json)) {
+    # Decode base64
+    tryCatch({
+      img_bytes <- base64enc::base64decode(image_data$b64_json)
+      writeBin(img_bytes, file)
+      message("Image saved to: ", file)
+    }, error = function(e) {
+      warning("Failed to save image: ", e$message, call. = FALSE)
+    })
+  }
+  invisible(file)
 }
