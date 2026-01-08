@@ -24,8 +24,15 @@ Together, these packages form a minimal, composable toolkit for multimodal AI wo
 
 Backends may include:
 - Diffusion-based image/video models
-- Talking-head systems (e.g., SadTalker, DiD)
+- Talking-head systems (e.g., SadTalker, D-ID)
 - Hosted APIs (OpenAI, Replicate, etc.)
+
+## Docker Containers
+
+| Container | Repo | Port | Purpose |
+|-----------|------|------|---------|
+| sadtalker | [cornball-ai/faster-SadTalker-API](https://github.com/cornball-ai/faster-SadTalker-API) | 10364 | Talking head video |
+| diffusers-api | cornball-ai/diffusers_api (private) | 8000 | Image generation |
 
 ---
 
