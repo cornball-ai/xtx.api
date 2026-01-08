@@ -97,6 +97,36 @@ stv_health <- function() {
   jsonlite::fromJSON(rawToChar(response$content))
 }
 
+#' Check if SadTalker Service is Available
+#'
+#' Quick check if the SadTalker API is reachable and healthy.
+#' Unlike stv_health(), this returns TRUE/FALSE and never throws errors.
+#'
+#' @param port Port to check (default from SADTALKER_PORT env var or 10364)
+#' @param timeout Timeout in seconds (default 2)
+#' @return TRUE if service is available, FALSE otherwise
+#' @export
+#' @examples
+#' \dontrun{
+#'   if (stv_available()) {
+#'     stv("portrait.jpg", "speech.wav")
+#'   }
+#' }
+stv_available <- function(port = NULL, timeout = 2) {
+  if (is.null(port)) {
+    port <- Sys.getenv("SADTALKER_PORT", "10364")
+  }
+  url <- paste0("http://localhost:", port, "/v1/health")
+
+  tryCatch({
+    h <- curl::new_handle()
+    curl::handle_setopt(h, timeout = timeout)
+    res <- curl::curl_fetch_memory(url, handle = h)
+    res$status_code == 200
+
+  }, error = function(e) FALSE)
+}
+
 #' Generate Talking Head Video (Speech-to-Video)
 #'
 #' Generate an audio-driven talking head video from a portrait image and audio.
