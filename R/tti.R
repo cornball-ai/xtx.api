@@ -353,7 +353,7 @@ tti <- function(prompt,
     )
   }
 
-  model <- model %||% "sd21"
+  model <- model %||% "sdxl"
 
   diffuser_model <- switch(
     model,
@@ -364,37 +364,46 @@ tti <- function(prompt,
     stop("Unsupported diffuseR model: ", model, ". Use 'sd21' or 'sdxl'.", call. = FALSE)
   )
 
-  if (is.null(size)) {
-    size <- if (diffuser_model == "sdxl") "1024x1024" else "768x768"
-  }
+  # Get cached pipeline (loads once, reuses thereafter)
+  p <- .xtx_get_diffuser_pipeline(diffuser_model, devices)
 
-  dims <- as.integer(strsplit(size, "x")[[1]])
-  img_dim <- dims[1]
-
-  save_file <- !is.null(file)
-  filename <- file
-
-  result <- diffuseR::txt2img(
-    prompt = prompt,
-    model_name = diffuser_model,
-    negative_prompt = negative_prompt,
-    img_dim = img_dim,
-    devices = devices,
-    num_inference_steps = as.integer(steps),
-    guidance_scale = guidance_scale,
-    seed = seed,
-    save_file = save_file,
-    filename = filename
-  )
+  # Use model-specific function with cached pipeline
+  # Wrap in no_grad to prevent gradient tracking during inference
+  torch::with_no_grad({
+    if (diffuser_model == "sdxl") {
+      diffuseR::txt2img_sdxl(
+        prompt = prompt,
+        devices = p$devices,
+        pipeline = p$pipeline,
+        unet_dtype_str = p$unet_dtype,
+        negative_prompt = negative_prompt,
+        num_inference_steps = as.integer(steps),
+        guidance_scale = guidance_scale,
+        seed = seed,
+        filename = file
+      )
+    } else {
+      diffuseR::txt2img_sd21(
+        prompt = prompt,
+        devices = p$devices,
+        pipeline = p$pipeline,
+        unet_dtype_str = p$unet_dtype,
+        negative_prompt = negative_prompt,
+        num_inference_steps = as.integer(steps),
+        guidance_scale = guidance_scale,
+        seed = seed,
+        filename = file
+      )
+    }
+  })
 
   list(
     data = list(
       list(
-        image = result$image,
+        image = if (!is.null(file)) file else NULL,
         revised_prompt = NULL
       )
     ),
-    metadata = result$metadata,
-    backend = "diffuser"
+    backend = "diffuseR"
   )
 }
