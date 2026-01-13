@@ -5,3 +5,4 @@
 xtxapi.Rproj
 *.tar.gz
 *.Rcheck/
+man-md/
