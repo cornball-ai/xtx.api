@@ -168,8 +168,8 @@ xtx_img_edit <- function(image,
     )
   }
 
-  # Default model
-  model <- model %||% "sd21"
+  # Default model - use sdxl to match tti default
+  model <- model %||% "sdxl"
 
   # Map model names
   diffuser_model <- switch(
@@ -189,21 +189,28 @@ xtx_img_edit <- function(image,
   save_file <- !is.null(file)
   filename <- file
 
-  # Call diffuseR::img2img
-  result <- diffuseR::img2img(
-    input_image = image,
-    prompt = prompt,
-    model_name = diffuser_model,
-    negative_prompt = negative_prompt,
-    img_dim = img_dim,
-    devices = devices,
-    num_inference_steps = as.integer(steps),
-    strength = strength,
-    guidance_scale = guidance_scale,
-    seed = seed,
-    save_file = save_file,
-    filename = filename
-  )
+  # Get cached pipeline (reuses the same pipeline as tti)
+  p <- .xtx_get_diffuser_pipeline(diffuser_model, devices)
+
+  # Call diffuseR::img2img with cached pipeline
+  torch::with_no_grad({
+    result <- diffuseR::img2img(
+      input_image = image,
+      prompt = prompt,
+      model_name = diffuser_model,
+      pipeline = p$pipeline,
+      devices = p$devices,
+      unet_dtype_str = p$unet_dtype,
+      negative_prompt = negative_prompt,
+      img_dim = img_dim,
+      num_inference_steps = as.integer(steps),
+      strength = strength,
+      guidance_scale = guidance_scale,
+      seed = seed,
+      save_file = save_file,
+      filename = filename
+    )
+  })
 
   # Normalize return structure
   list(
