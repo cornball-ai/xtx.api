@@ -100,55 +100,96 @@ itv_health <- function() {
 #' Generate Video from Image (Image-to-Video)
 #'
 #' Generate a video from an input image and motion prompt.
-#' Uses CogVideoX-5b-I2V via diffusers_api.
+#' Supports multiple backends: CogVideoX (diffusers_api) or WanGP (LTX-2).
 #'
 #' @param image Path to starting frame image (PNG/JPG) or base64 string
 #' @param prompt Motion/scene description
 #' @param output Path for output video file (default: "itv_output.mp4")
-#' @param model Model ID (default: "THUDM/CogVideoX-5b-I2V")
-#' @param num_frames Number of frames to generate (default: 49)
-#' @param num_steps Number of inference steps (default: 50)
-#' @param timeout Request timeout in seconds (default: 900 for slow generation)
+#' @param backend Backend to use: "cogvideo" (default) or "wan2gp"
+#' @param model Model ID. For cogvideo: "THUDM/CogVideoX-5b-I2V".
+#'   For wan2gp: "ltx2" (default)
+#' @param num_frames Number of frames to generate (default: 49 for cogvideo, 129 for wan2gp)
+#' @param num_steps Number of inference steps (default varies by backend/model)
+#' @param width Video width (wan2gp only, default: 832)
+#' @param height Video height (wan2gp only, default: 832)
+#' @param guidance_scale CFG scale (wan2gp only)
+#' @param seed Random seed (wan2gp only)
+#' @param timeout Request timeout in seconds (default: 900)
 #' @return Invisibly returns the output file path
 #' @examples
 #' \dontrun{
+#'   # CogVideoX (default)
 #'   itv("scene.jpg", "Camera slowly zooms in", "video.mp4")
-#'   itv("cat.png", "Cat stretches and yawns", num_frames = 49)
+#'
+#'   # LTX-2 via WanGP
+#'   itv("portrait.jpg", "Person talking and gesturing",
+#'       backend = "wan2gp", model = "ltx2")
 #' }
 #' @export
 itv <- function(image, prompt = "", output = "itv_output.mp4",
-                model = "THUDM/CogVideoX-5b-I2V",
-                num_frames = 49L, num_steps = 50L, timeout = 900) {
+                backend = c("cogvideo", "wan2gp"),
+                model = NULL,
+                num_frames = NULL, num_steps = NULL,
+                width = 832L, height = 832L,
+                guidance_scale = NULL, seed = NULL,
+                timeout = 900) {
 
-  # Encode image
-  if (file.exists(image)) {
-    image_b64 <- base64enc::base64encode(image)
-  } else if (grepl("^[A-Za-z0-9+/]", image) && nchar(image) > 100) {
-    image_b64 <- image
+  backend <- match.arg(backend)
+
+  if (backend == "wan2gp") {
+    # WanGP backend (LTX-2)
+    model <- model %||% "ltx2"
+    num_frames <- num_frames %||% 129L
+
+    .wan2gp_generate(
+      prompt = prompt,
+      model = model,
+      image = image,
+      output = output,
+      width = width,
+      height = height,
+      num_frames = num_frames,
+      steps = num_steps,
+      guidance_scale = guidance_scale,
+      seed = seed,
+      timeout = timeout
+    )
   } else {
-    stop("Image file not found: ", image, call. = FALSE)
+    # CogVideoX backend (default)
+    model <- model %||% "THUDM/CogVideoX-5b-I2V"
+    num_frames <- num_frames %||% 49L
+    num_steps <- num_steps %||% 50L
+
+    # Encode image
+    if (file.exists(image)) {
+      image_b64 <- base64enc::base64encode(image)
+    } else if (grepl("^[A-Za-z0-9+/]", image) && nchar(image) > 100) {
+      image_b64 <- image
+    } else {
+      stop("Image file not found: ", image, call. = FALSE)
+    }
+
+    # Build request body
+    body <- list(
+      model_id = model,
+      image = image_b64,
+      prompt = prompt,
+      num_inference_steps = as.integer(num_steps),
+      num_frames = as.integer(num_frames)
+    )
+
+    # Make request
+    result <- .itv_post_json("/image-to-video", body, timeout = timeout)
+
+    # Decode and save video
+    if (!is.null(result$video)) {
+      video_bytes <- base64enc::base64decode(result$video)
+      writeBin(video_bytes, output)
+      message("ITV video saved to: ", output)
+    }
+
+    invisible(output)
   }
-
-  # Build request body
-  body <- list(
-    model_id = model,
-    image = image_b64,
-    prompt = prompt,
-    num_inference_steps = as.integer(num_steps),
-    num_frames = as.integer(num_frames)
-  )
-
-  # Make request
-  result <- .itv_post_json("/image-to-video", body, timeout = timeout)
-
-  # Decode and save video
-  if (!is.null(result$video)) {
-    video_bytes <- base64enc::base64decode(result$video)
-    writeBin(video_bytes, output)
-    message("ITV video saved to: ", output)
-  }
-
-  invisible(output)
 }
 
 #' List Available Models

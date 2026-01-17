@@ -8,8 +8,15 @@ stv(
   image = NULL,
   audio,
   output = "stv_output.mp4",
+  backend = c("sadtalker", "wan2gp"),
+  model = c("hunyuan", "fantasy", "ltx2"),
   face_id = NULL,
   enhance = FALSE,
+  prompt = "Person speaking",
+  width = 832L,
+  height = 832L,
+  num_frames = 129L,
+  seed = NULL,
   device = "cuda",
   timeout = 600
 )
@@ -21,11 +28,27 @@ stv(
 
 \item{output}{Path for output video file (default: "stv_output.mp4")}
 
-\item{face_id}{Cached face ID (use instead of image for faster generation)}
+\item{backend}{Backend to use: "sadtalker" (default) or "wan2gp"}
 
-\item{enhance}{Apply GFPGAN face enhancement (uses more VRAM)}
+\item{model}{Model for wan2gp backend: "hunyuan" (real faces), "fantasy" (stylized),
+or "ltx2" (general). Ignored for sadtalker.}
 
-\item{device}{Device to use: "cuda" or "cpu"}
+\item{face_id}{Cached face ID for sadtalker (use instead of image for faster
+generation)}
+
+\item{enhance}{Apply GFPGAN face enhancement (sadtalker only)}
+
+\item{prompt}{Text prompt describing the scene (wan2gp only)}
+
+\item{width}{Video width (wan2gp only, default: 832)}
+
+\item{height}{Video height (wan2gp only, default: 832)}
+
+\item{num_frames}{Number of frames (wan2gp only, default: 129)}
+
+\item{seed}{Random seed (wan2gp only)}
+
+\item{device}{Device to use: "cuda" or "cpu" (sadtalker only)}
 
 \item{timeout}{Request timeout in seconds (default: 600)}
 }
@@ -34,15 +57,19 @@ Invisibly returns the output file path
 }
 \description{
 Generate an audio-driven talking head video from a portrait image and
-audio. Uses the faster-SadTalker-API service.
+audio. Supports multiple backends: SadTalker (default) or WanGP
+(Hunyuan/Fantasy/LTX-2).
 }
 \examples{
 \dontrun{
+  # SadTalker (default, fastest for real faces)
   stv("portrait.jpg", "speech.wav", "talking.mp4")
-  stv("face.png", "audio.mp3", enhance = TRUE)
 
-  # Using cached face for faster generation
-  face <- stv_face_create("portrait.jpg")
-  stv(face_id = face$id, audio = "speech.wav")
+  # Hunyuan Avatar (better quality, slower, needs 24GB VRAM)
+  stv("portrait.jpg", "speech.wav", backend = "wan2gp", model = "hunyuan")
+
+  # LTX-2 with audio guide (16GB VRAM, fast)
+  stv("portrait.jpg", "speech.wav", backend = "wan2gp", model = "ltx2",
+      prompt = "Person speaking into microphone")
 }
 }

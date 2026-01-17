@@ -8,9 +8,14 @@ itv(
   image,
   prompt = "",
   output = "itv_output.mp4",
-  model = "THUDM/CogVideoX-5b-I2V",
-  num_frames = 49L,
-  num_steps = 50L,
+  backend = c("cogvideo", "wan2gp"),
+  model = NULL,
+  num_frames = NULL,
+  num_steps = NULL,
+  width = 832L,
+  height = 832L,
+  guidance_scale = NULL,
+  seed = NULL,
   timeout = 900
 )
 }
@@ -21,24 +26,39 @@ itv(
 
 \item{output}{Path for output video file (default: "itv_output.mp4")}
 
-\item{model}{Model ID (default: "THUDM/CogVideoX-5b-I2V")}
+\item{backend}{Backend to use: "cogvideo" (default) or "wan2gp"}
 
-\item{num_frames}{Number of frames to generate (default: 49)}
+\item{model}{Model ID. For cogvideo: "THUDM/CogVideoX-5b-I2V". For wan2gp: "ltx2"
+(default)}
 
-\item{num_steps}{Number of inference steps (default: 50)}
+\item{num_frames}{Number of frames to generate (default: 49 for cogvideo, 129 for wan2gp)}
 
-\item{timeout}{Request timeout in seconds (default: 900 for slow generation)}
+\item{num_steps}{Number of inference steps (default varies by backend/model)}
+
+\item{width}{Video width (wan2gp only, default: 832)}
+
+\item{height}{Video height (wan2gp only, default: 832)}
+
+\item{guidance_scale}{CFG scale (wan2gp only)}
+
+\item{seed}{Random seed (wan2gp only)}
+
+\item{timeout}{Request timeout in seconds (default: 900)}
 }
 \value{
 Invisibly returns the output file path
 }
 \description{
-Generate a video from an input image and motion prompt. Uses
-CogVideoX-5b-I2V via diffusers_api.
+Generate a video from an input image and motion prompt. Supports
+multiple backends: CogVideoX (diffusers_api) or WanGP (LTX-2).
 }
 \examples{
 \dontrun{
+  # CogVideoX (default)
   itv("scene.jpg", "Camera slowly zooms in", "video.mp4")
-  itv("cat.png", "Cat stretches and yawns", num_frames = 49)
+
+  # LTX-2 via WanGP
+  itv("portrait.jpg", "Person talking and gesturing",
+      backend = "wan2gp", model = "ltx2")
 }
 }

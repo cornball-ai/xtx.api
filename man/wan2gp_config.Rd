@@ -29,9 +29,3 @@ Invisibly returns previous settings as a list
 \description{
 Set default paths and options for WanGP docker integration.
 }
-\examples{
-\dontrun{
-  wan2gp_config(profile = 3)  # Use medium VRAM profile
-  wan2gp_config(output_dir = "/data/videos")
-}
-}

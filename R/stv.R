@@ -130,83 +130,124 @@ stv_available <- function(port = NULL, timeout = 2) {
 #' Generate Talking Head Video (Speech-to-Video)
 #'
 #' Generate an audio-driven talking head video from a portrait image and audio.
-#' Uses the faster-SadTalker-API service.
+#' Supports multiple backends: SadTalker (default) or WanGP (Hunyuan/Fantasy/LTX-2).
 #'
 #' @param image Path to portrait image (PNG/JPG, front-facing) or base64 string
 #' @param audio Path to speech audio file (WAV/MP3) or base64 string
 #' @param output Path for output video file (default: "stv_output.mp4")
-#' @param face_id Cached face ID (use instead of image for faster generation)
-#' @param enhance Apply GFPGAN face enhancement (uses more VRAM)
-#' @param device Device to use: "cuda" or "cpu"
+#' @param backend Backend to use: "sadtalker" (default) or "wan2gp"
+#' @param model Model for wan2gp backend: "hunyuan" (real faces), "fantasy" (stylized),
+#'   or "ltx2" (general). Ignored for sadtalker.
+#' @param face_id Cached face ID for sadtalker (use instead of image for faster generation)
+#' @param enhance Apply GFPGAN face enhancement (sadtalker only)
+#' @param prompt Text prompt describing the scene (wan2gp only)
+#' @param width Video width (wan2gp only, default: 832)
+#' @param height Video height (wan2gp only, default: 832)
+#' @param num_frames Number of frames (wan2gp only, default: 129)
+#' @param seed Random seed (wan2gp only)
+#' @param device Device to use: "cuda" or "cpu" (sadtalker only)
 #' @param timeout Request timeout in seconds (default: 600)
 #' @return Invisibly returns the output file path
 #' @examples
 #' \dontrun{
+#'   # SadTalker (default, fastest for real faces)
 #'   stv("portrait.jpg", "speech.wav", "talking.mp4")
-#'   stv("face.png", "audio.mp3", enhance = TRUE)
 #'
-#'   # Using cached face for faster generation
-#'   face <- stv_face_create("portrait.jpg")
-#'   stv(face_id = face$id, audio = "speech.wav")
+#'   # Hunyuan Avatar (better quality, slower, needs 24GB VRAM)
+#'   stv("portrait.jpg", "speech.wav", backend = "wan2gp", model = "hunyuan")
+#'
+#'   # LTX-2 with audio guide (16GB VRAM, fast)
+#'   stv("portrait.jpg", "speech.wav", backend = "wan2gp", model = "ltx2",
+#'       prompt = "Person speaking into microphone")
 #' }
 #' @export
 stv <- function(image = NULL, audio, output = "stv_output.mp4",
-                face_id = NULL, enhance = FALSE, device = "cuda",
-                timeout = 600) {
+                backend = c("sadtalker", "wan2gp"),
+                model = c("hunyuan", "fantasy", "ltx2"),
+                face_id = NULL, enhance = FALSE,
+                prompt = "Person speaking",
+                width = 832L, height = 832L, num_frames = 129L,
+                seed = NULL, device = "cuda", timeout = 600) {
 
-  # Validate inputs
-  if (is.null(face_id) && is.null(image)) {
-    stop("Either 'image' or 'face_id' must be provided", call. = FALSE)
-  }
+  backend <- match.arg(backend)
 
-  # Acquire GPU for sadtalker service
-  .gpuctl_acquire("sadtalker")
+  if (backend == "wan2gp") {
+    # WanGP backend (Hunyuan/Fantasy/LTX-2)
+    model <- match.arg(model)
 
-  # Encode audio
-  if (file.exists(audio)) {
-    audio_b64 <- base64enc::base64encode(audio)
-  } else if (grepl("^[A-Za-z0-9+/]", audio) && nchar(audio) > 100) {
-    audio_b64 <- audio
+    if (is.null(image)) {
+      stop("'image' is required for wan2gp backend", call. = FALSE)
+    }
+
+    .wan2gp_generate(
+      prompt = prompt,
+      model = model,
+      image = image,
+      audio = audio,
+      output = output,
+      width = width,
+      height = height,
+      num_frames = num_frames,
+      seed = seed,
+      timeout = timeout
+    )
   } else {
-    stop("Audio file not found: ", audio, call. = FALSE)
-  }
+    # SadTalker backend (default)
 
-  # Build request body
-  body <- list(
-    model = "sadtalker-v1",
-    audio = audio_b64,
-    enhance = enhance,
-    device = device,
-    response_format = "b64_json"
-  )
+    # Validate inputs
+    if (is.null(face_id) && is.null(image)) {
+      stop("Either 'image' or 'face_id' must be provided", call. = FALSE)
+    }
 
-  if (!is.null(face_id)) {
-    body$face_id <- face_id
-  } else {
-    # Encode image
-    if (file.exists(image)) {
-      body$source_image <- base64enc::base64encode(image)
-    } else if (grepl("^[A-Za-z0-9+/]", image) && nchar(image) > 100) {
-      body$source_image <- image
+    # Acquire GPU for sadtalker service
+    .gpuctl_acquire("sadtalker")
+
+    # Encode audio
+    if (file.exists(audio)) {
+      audio_b64 <- base64enc::base64encode(audio)
+    } else if (grepl("^[A-Za-z0-9+/]", audio) && nchar(audio) > 100) {
+      audio_b64 <- audio
     } else {
-      stop("Image file not found: ", image, call. = FALSE)
+      stop("Audio file not found: ", audio, call. = FALSE)
     }
-  }
 
-  # Make request
-  result <- .stv_post_json("/v1/video/generations", body, timeout = timeout)
+    # Build request body
+    body <- list(
+      model = "sadtalker-v1",
+      audio = audio_b64,
+      enhance = enhance,
+      device = device,
+      response_format = "b64_json"
+    )
 
-  # Decode and save video
-  if (!is.null(result$data) && length(result$data) > 0) {
-    video_b64 <- result$data[[1]]$b64_json
-    if (!is.null(video_b64)) {
-      video_bytes <- base64enc::base64decode(video_b64)
-      writeBin(video_bytes, output)
-      message("STV video saved to: ", output)
+    if (!is.null(face_id)) {
+      body$face_id <- face_id
+    } else {
+      # Encode image
+      if (file.exists(image)) {
+        body$source_image <- base64enc::base64encode(image)
+      } else if (grepl("^[A-Za-z0-9+/]", image) && nchar(image) > 100) {
+        body$source_image <- image
+      } else {
+        stop("Image file not found: ", image, call. = FALSE)
+      }
     }
-  }
 
-  invisible(output)
+    # Make request
+    result <- .stv_post_json("/v1/video/generations", body, timeout = timeout)
+
+    # Decode and save video
+    if (!is.null(result$data) && length(result$data) > 0) {
+      video_b64 <- result$data[[1]]$b64_json
+      if (!is.null(video_b64)) {
+        video_bytes <- base64enc::base64decode(video_b64)
+        writeBin(video_bytes, output)
+        message("STV video saved to: ", output)
+      }
+    }
+
+    invisible(output)
+  }
 }
 
 #' Create Cached Face for STV
