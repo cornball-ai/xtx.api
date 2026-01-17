@@ -1,7 +1,7 @@
-# gpuctl integration for xtxapi
+# gpu.ctl integration for xtx.api
 #
-# Optionally acquires GPU resources before API calls when gpuctl is available.
-# Enable with: options(xtxapi.gpuctl = TRUE)
+# Optionally acquires GPU resources before API calls when gpu.ctl is available.
+# Enable with: options(xtx.gpuctl = TRUE)
 
 # Service configurations
 .xtx_gpu_services <- list(
@@ -19,14 +19,14 @@
   )
 )
 
-#' Check if gpuctl integration is enabled
+#' Check if gpu.ctl integration is enabled
 #' @noRd
 .gpuctl_enabled <- function() {
-  isTRUE(getOption("xtxapi.gpuctl", FALSE)) &&
-    requireNamespace("gpuctl", quietly = TRUE)
+  isTRUE(getOption("xtx.gpuctl", FALSE)) &&
+    requireNamespace("gpu.ctl", quietly = TRUE)
 }
 
-#' Register xtxapi services with gpuctl
+#' Register xtx.api services with gpu.ctl
 #' @noRd
 .gpuctl_register_services <- function() {
   if (!.gpuctl_enabled()) return(invisible(FALSE))
@@ -35,9 +35,9 @@
     svc <- .xtx_gpu_services[[name]]
     tryCatch({
       # Only register if not already registered
-      existing <- gpuctl::gpu_services()
+      existing <- gpu.ctl::gpu_services()
       if (!name %in% existing$name) {
-        gpuctl::gpu_register(
+        gpu.ctl::gpu_register(
           name = name,
           port = svc$port,
           vram = svc$vram,
@@ -52,10 +52,10 @@
   invisible(TRUE)
 }
 
-#' Acquire GPU for a service if gpuctl is enabled
+#' Acquire GPU for a service if gpu.ctl is enabled
 #'
 #' @param service Character. Service name: "diffusers" or "sadtalker"
-#' @return Invisible TRUE if acquired, FALSE if not using gpuctl
+#' @return Invisible TRUE if acquired, FALSE if not using gpu.ctl
 #' @noRd
 .gpuctl_acquire <- function(service) {
   if (!.gpuctl_enabled()) return(invisible(FALSE))
@@ -63,10 +63,10 @@
   .gpuctl_register_services()
 
   tryCatch({
-    gpuctl::gpu_acquire(service)
+    gpu.ctl::gpu_acquire(service)
     invisible(TRUE)
   }, error = function(e) {
-    warning("gpuctl: ", e$message, call. = FALSE)
+    warning("gpu.ctl: ", e$message, call. = FALSE)
     invisible(FALSE)
   })
 }

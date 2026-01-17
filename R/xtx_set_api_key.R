@@ -16,7 +16,7 @@ xtx_set_api_key <- function(key) {
   if (!is.character(key) || length(key) != 1 || nchar(key) == 0) {
     stop("'key' must be a non-empty character string", call. = FALSE)
   }
-  old <- getOption("xtxapi.api_key")
-  options(xtxapi.api_key = key)
+  old <- getOption("xtx.api_key")
+  options(xtx.api_key = key)
   invisible(old)
 }

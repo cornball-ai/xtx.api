@@ -22,7 +22,7 @@ xtx_set_api_base <- function(url) {
     stop("'url' must be a non-empty character string", call. = FALSE)
   }
   url <- sub("/$", "", url)  # Remove trailing slash
-  old <- getOption("xtxapi.api_base")
-  options(xtxapi.api_base = url)
+  old <- getOption("xtx.api_base")
+  options(xtx.api_base = url)
   invisible(old)
 }

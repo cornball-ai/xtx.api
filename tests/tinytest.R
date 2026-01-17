@@ -1,3 +1,3 @@
 if (requireNamespace("tinytest", quietly = TRUE)) {
-  tinytest::test_package("xtxapi")
+  tinytest::test_package("xtx.api")
 }

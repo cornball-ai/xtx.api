@@ -15,15 +15,15 @@ tti_base <- function(url) {
   if (!is.character(url) || length(url) != 1 || nchar(url) == 0) {
     stop("'url' must be a non-empty character string", call. = FALSE)
   }
-  old <- getOption("xtxapi.tti_base")
-  options(xtxapi.tti_base = url)
+  old <- getOption("xtx.tti_base")
+  options(xtx.tti_base = url)
   invisible(old)
 }
 
 #' Get TTI API Base URL
 #' @keywords internal
 .tti_get_base <- function() {
-  base <- getOption("xtxapi.tti_base")
+  base <- getOption("xtx.tti_base")
   if (is.null(base) || nchar(base) == 0) {
     stop(
       "TTI API base URL not set. Use tti_base() to configure it.\n",

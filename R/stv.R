@@ -16,15 +16,15 @@ stv_base <- function(url) {
   if (!is.character(url) || length(url) != 1 || nchar(url) == 0) {
     stop("'url' must be a non-empty character string", call. = FALSE)
   }
-  old <- getOption("xtxapi.stv_base")
-  options(xtxapi.stv_base = url)
+  old <- getOption("xtx.stv_base")
+  options(xtx.stv_base = url)
   invisible(old)
 }
 
 #' Get STV API Base URL
 #' @keywords internal
 .stv_get_base <- function() {
-  base <- getOption("xtxapi.stv_base")
+  base <- getOption("xtx.stv_base")
   if (is.null(base) || nchar(base) == 0) {
     stop(
       "STV API base URL not set. Use stv_base() to configure it.\n",
@@ -42,7 +42,7 @@ stv_base <- function(url) {
   url <- paste0(base, endpoint)
 
   h <- curl::new_handle()
-  timeout <- timeout %||% getOption("xtxapi.timeout", 600)
+  timeout <- timeout %||% getOption("xtx.timeout", 600)
   curl::handle_setopt(h, timeout = timeout)
   curl::handle_setheaders(h, "Content-Type" = "application/json")
 
@@ -80,7 +80,7 @@ stv_health <- function() {
   url <- paste0(base, "/v1/health")
 
   h <- curl::new_handle()
-  timeout <- getOption("xtxapi.timeout", 30)
+  timeout <- getOption("xtx.timeout", 30)
   curl::handle_setopt(h, timeout = timeout)
 
   response <- tryCatch(
@@ -257,7 +257,7 @@ stv_face_list <- function() {
   url <- paste0(base, "/v1/faces")
 
   h <- curl::new_handle()
-  timeout <- getOption("xtxapi.timeout", 30)
+  timeout <- getOption("xtx.timeout", 30)
   curl::handle_setopt(h, timeout = timeout)
 
   response <- tryCatch(
@@ -290,7 +290,7 @@ stv_face_delete <- function(face_id) {
   url <- paste0(base, "/v1/faces/", face_id)
 
   h <- curl::new_handle()
-  timeout <- getOption("xtxapi.timeout", 30)
+  timeout <- getOption("xtx.timeout", 30)
   curl::handle_setopt(h, customrequest = "DELETE", timeout = timeout)
 
   response <- tryCatch(

@@ -1,4 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-CLAUDE.md
-.claude
+^CLAUDE\.md$
+^\.claude$
+^fyi\.md$
+^man-md$
+^.*\.tar\.gz$

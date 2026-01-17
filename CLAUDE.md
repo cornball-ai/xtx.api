@@ -1,4 +1,4 @@
-# xtxapi
+# xtx.api
 
 Cross-modal generation API. Part of [cornyverse](~/cornyverse).
 
@@ -50,5 +50,5 @@ devices = list(unet = "cuda", decoder = "cpu",
 ## Options
 
 ```r
-xtxapi.gpuctl  # Enable GPU management (TRUE/FALSE)
+xtx.gpuctl  # Enable GPU management (TRUE/FALSE)
 ```

@@ -3,7 +3,7 @@
 #' Get API base URL
 #' @keywords internal
 .xtx_get_api_base <- function() {
-  base <- getOption("xtxapi.api_base")
+  base <- getOption("xtx.api_base")
   if (is.null(base) || nchar(base) == 0) {
     stop(
       "API base URL not set. Use xtx_set_api_base() to configure it.\n",
@@ -17,7 +17,7 @@
 #' Get API key (optional for some backends)
 #' @keywords internal
 .xtx_get_api_key <- function(required = TRUE) {
-  key <- getOption("xtxapi.api_key")
+  key <- getOption("xtx.api_key")
   if (required && (is.null(key) || nchar(key) == 0)) {
     stop(
       "API key not set. Use xtx_set_api_key() to configure it.\n",
@@ -31,7 +31,7 @@
 #' Get timeout setting
 #' @keywords internal
 .xtx_get_timeout <- function() {
-  getOption("xtxapi.timeout", 120)
+  getOption("xtx.timeout", 120)
 }
 
 #' Make HTTP request

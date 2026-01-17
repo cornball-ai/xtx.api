@@ -100,8 +100,8 @@ xtx_backends <- function() {
   list(
     openai = list(
       available = TRUE,
-      configured = !is.null(getOption("xtxapi.api_key")),
-      api_base = getOption("xtxapi.api_base")
+      configured = !is.null(getOption("xtx.api_key")),
+      api_base = getOption("xtx.api_base")
     ),
     diffuser = list(
       available = .xtx_has_diffuser(),

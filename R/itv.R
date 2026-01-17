@@ -16,15 +16,15 @@ itv_base <- function(url) {
   if (!is.character(url) || length(url) != 1 || nchar(url) == 0) {
     stop("'url' must be a non-empty character string", call. = FALSE)
   }
-  old <- getOption("xtxapi.itv_base")
-  options(xtxapi.itv_base = url)
+  old <- getOption("xtx.itv_base")
+  options(xtx.itv_base = url)
   invisible(old)
 }
 
 #' Get ITV API Base URL
 #' @keywords internal
 .itv_get_base <- function() {
-  base <- getOption("xtxapi.itv_base")
+  base <- getOption("xtx.itv_base")
   if (is.null(base) || nchar(base) == 0) {
     stop(
       "ITV API base URL not set. Use itv_base() to configure it.\n",
@@ -42,7 +42,7 @@ itv_base <- function(url) {
   url <- paste0(base, endpoint)
 
   h <- curl::new_handle()
-  timeout <- timeout %||% getOption("xtxapi.timeout", 600)
+  timeout <- timeout %||% getOption("xtx.timeout", 600)
   curl::handle_setopt(h, timeout = timeout)
   curl::handle_setheaders(h, "Content-Type" = "application/json")
 
@@ -80,7 +80,7 @@ itv_health <- function() {
   url <- paste0(base, "/health")
 
   h <- curl::new_handle()
-  timeout <- getOption("xtxapi.timeout", 30)
+  timeout <- getOption("xtx.timeout", 30)
   curl::handle_setopt(h, timeout = timeout)
 
   response <- tryCatch(
@@ -166,7 +166,7 @@ itv_models <- function() {
   url <- paste0(base, "/models")
 
   h <- curl::new_handle()
-  timeout <- getOption("xtxapi.timeout", 30)
+  timeout <- getOption("xtx.timeout", 30)
   curl::handle_setopt(h, timeout = timeout)
 
   response <- tryCatch(

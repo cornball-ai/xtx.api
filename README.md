@@ -1,13 +1,13 @@
-# xtxapi
+# xtx.api
 
-`xtxapi` provides a lightweight R interface for **cross-modal generative models** —
+`xtx.api` provides a lightweight R interface for **cross-modal generative models** —
 systems that transform text, images, audio, and video into new media.
 
 It is designed to work alongside:
 
-- **sttapi** — speech → text  
-- **ttsapi** — text → speech  
-- **xtxapi** — cross-modal generation  
+- **stt.api** — speech → text
+- **tts.api** — text → speech
+- **xtx.api** — cross-modal generation
 
 Together, these packages form a minimal, composable toolkit for multimodal AI workflows in R.
 
@@ -15,7 +15,7 @@ Together, these packages form a minimal, composable toolkit for multimodal AI wo
 
 ## Supported Modalities
 
-`xtxapi` is intended to support:
+`xtx.api` is intended to support:
 
 - Text → Image
 - Text → Video
@@ -39,7 +39,7 @@ Backends may include:
 ## Example
 
 ```r
-library(xtxapi)
+library(xtx.api)
 
 xtx_generate(
   input = "A cinematic shot of a robot walking through fog",
