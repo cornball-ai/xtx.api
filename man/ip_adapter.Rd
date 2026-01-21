@@ -31,8 +31,7 @@ ip_adapter(
 - "faceid": Uses InsightFace embeddings (best for face accuracy)
 - "faceid-plus": Combines FaceID + CLIP (best quality faces)}
 
-\item{model}{Character. Base model to use. Default
-"stabilityai/stable-diffusion-xl-base-1.0".}
+\item{model}{Character. Base model to use. Default "stabilityai/stable-diffusion-xl-base-1.0".}
 
 \item{ip_adapter_scale}{Numeric. Influence of reference image (0-1). Default 0.6.}
 

@@ -33,8 +33,7 @@ stv(
 \item{model}{Model for wan2gp backend: "hunyuan" (real faces), "fantasy" (stylized),
 or "ltx2" (general). For fal: "fal-ai/sadtalker" (default). Ignored for sadtalker.}
 
-\item{face_id}{Cached face ID for sadtalker (use instead of image for faster
-generation)}
+\item{face_id}{Cached face ID for sadtalker (use instead of image for faster generation)}
 
 \item{enhance}{Apply GFPGAN face enhancement (sadtalker only)}
 

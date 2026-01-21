@@ -7,8 +7,7 @@
 xtx_supported_models(backend = NULL)
 }
 \arguments{
-\item{backend}{Character or NULL. Filter by backend: "openai", "diffuser", or NULL for
-all.}
+\item{backend}{Character or NULL. Filter by backend: "openai", "diffuser", or NULL for all.}
 }
 \value{
 A data frame with columns: model, backend, type, description.
