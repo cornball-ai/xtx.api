@@ -13,8 +13,8 @@ xtx_set_api_base(url)
 Invisibly returns the previous base URL value.
 }
 \description{
-Configure the base URL for the image generation API. Defaults to
-OpenAI's API endpoint.
+Configure the base URL for the image generation API.
+Defaults to OpenAI's API endpoint.
 }
 \examples{
 \dontrun{

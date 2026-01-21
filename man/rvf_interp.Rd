@@ -30,15 +30,15 @@ rvf_interp(
 Path to the output image (invisibly)
 }
 \description{
-Generate an intermediate frame between two images using RIFE. Wrapper
-around rife::rife_interpolate().
+Generate an intermediate frame between two images using RIFE.
+Wrapper around rife::rife_interpolate().
 }
 \examples{
 \dontrun{
 # Middle frame between two images
 rvf_interp("frame1.png", "frame2.png", "middle.png")
 
-# 25% between first and second
+# 25\% between first and second
 rvf_interp("a.png", "b.png", "out.png", timestep = 0.25)
 }
 

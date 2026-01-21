@@ -24,11 +24,12 @@ ip_adapter(
 
 \item{reference_image}{Character. Path to reference image file OR base64 string.}
 
-\item{ip_adapter_type}{Character. Type of IP-Adapter to use: - "standard": Basic style/content
-transfer - "plus": Better detail preservation (ViT-H encoder) - "face":
-Face generation using CLIP (good for faces) - "faceid": Uses InsightFace
-embeddings (best for face accuracy) - "faceid-plus": Combines FaceID +
-CLIP (best quality faces)}
+\item{ip_adapter_type}{Character. Type of IP-Adapter to use:
+- "standard": Basic style/content transfer
+- "plus": Better detail preservation (ViT-H encoder)
+- "face": Face generation using CLIP (good for faces)
+- "faceid": Uses InsightFace embeddings (best for face accuracy)
+- "faceid-plus": Combines FaceID + CLIP (best quality faces)}
 
 \item{model}{Character. Base model to use. Default
 "stabilityai/stable-diffusion-xl-base-1.0".}
@@ -54,9 +55,9 @@ A list with the generated image data, or invisibly returns the file path
   if `file` is specified.
 }
 \description{
-Generate an image using IP-Adapter with a reference image for face or
-style consistency. This is ideal when you only have 1-2 reference images
-and don't want to train a LoRA.
+Generate an image using IP-Adapter with a reference image for face or style
+consistency. This is ideal when you only have 1-2 reference images and don't
+want to train a LoRA.
 }
 \examples{
 \dontrun{

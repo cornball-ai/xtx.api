@@ -45,8 +45,8 @@ ttv(
 Invisibly returns the output file path
 }
 \description{
-Generate a video from a text prompt alone (no input image). Uses LTX-2
-via WanGP.
+Generate a video from a text prompt alone (no input image).
+Uses LTX-2 via WanGP.
 }
 \examples{
 \dontrun{

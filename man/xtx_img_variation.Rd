@@ -30,8 +30,8 @@ xtx_img_variation(
 A list containing the generated image data.
 }
 \description{
-Generate variations of an existing image using DALL-E 2. Note: This
-function only works with the OpenAI backend.
+Generate variations of an existing image using DALL-E 2.
+Note: This function only works with the OpenAI backend.
 }
 \examples{
 \dontrun{

@@ -13,8 +13,8 @@ ip_adapter_face(prompt, face_image, file, scale = 0.6, ...)
 
 \item{file}{Character. Output file path.}
 
-\item{scale}{Numeric. Face similarity strength (0-1). Default 0.6. Higher = more
-similar but less prompt adherence.}
+\item{scale}{Numeric. Face similarity strength (0-1). Default 0.6.
+Higher = more similar but less prompt adherence.}
 
 \item{...}{Additional arguments passed to ip_adapter().}
 }
@@ -22,8 +22,8 @@ similar but less prompt adherence.}
 Invisibly returns the file path.
 }
 \description{
-Shortcut for generating face-consistent images using FaceID. Uses
-sensible defaults optimized for face generation.
+Shortcut for generating face-consistent images using FaceID.
+Uses sensible defaults optimized for face generation.
 }
 \examples{
 \dontrun{

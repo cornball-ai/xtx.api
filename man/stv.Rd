@@ -8,8 +8,8 @@ stv(
   image = NULL,
   audio,
   output = "stv_output.mp4",
-  backend = c("sadtalker", "wan2gp"),
-  model = c("hunyuan", "fantasy", "ltx2"),
+  backend = c("sadtalker", "wan2gp", "fal"),
+  model = NULL,
   face_id = NULL,
   enhance = FALSE,
   prompt = "Person speaking",
@@ -28,10 +28,10 @@ stv(
 
 \item{output}{Path for output video file (default: "stv_output.mp4")}
 
-\item{backend}{Backend to use: "sadtalker" (default) or "wan2gp"}
+\item{backend}{Backend to use: "sadtalker" (default), "wan2gp", or "fal"}
 
 \item{model}{Model for wan2gp backend: "hunyuan" (real faces), "fantasy" (stylized),
-or "ltx2" (general). Ignored for sadtalker.}
+or "ltx2" (general). For fal: "fal-ai/sadtalker" (default). Ignored for sadtalker.}
 
 \item{face_id}{Cached face ID for sadtalker (use instead of image for faster
 generation)}
@@ -56,9 +56,8 @@ generation)}
 Invisibly returns the output file path
 }
 \description{
-Generate an audio-driven talking head video from a portrait image and
-audio. Supports multiple backends: SadTalker (default) or WanGP
-(Hunyuan/Fantasy/LTX-2).
+Generate an audio-driven talking head video from a portrait image and audio.
+Supports multiple backends: SadTalker (default), WanGP, or fal.ai.
 }
 \examples{
 \dontrun{

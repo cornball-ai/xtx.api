@@ -37,7 +37,11 @@ stv_base <- function(url) {
 
 #' POST JSON to STV API
 #' @keywords internal
-.stv_post_json <- function(endpoint, body, timeout = NULL) {
+.stv_post_json <- function(
+  endpoint,
+  body,
+  timeout = NULL
+) {
   base <- .stv_get_base()
   url <- paste0(base, endpoint)
 
@@ -112,32 +116,35 @@ stv_health <- function() {
 #'     stv("portrait.jpg", "speech.wav")
 #'   }
 #' }
-stv_available <- function(port = NULL, timeout = 2) {
+stv_available <- function(
+  port = NULL,
+  timeout = 2
+) {
   if (is.null(port)) {
     port <- Sys.getenv("SADTALKER_PORT", "10364")
   }
   url <- paste0("http://localhost:", port, "/v1/health")
 
   tryCatch({
-    h <- curl::new_handle()
-    curl::handle_setopt(h, timeout = timeout)
-    res <- curl::curl_fetch_memory(url, handle = h)
-    res$status_code == 200
+      h <- curl::new_handle()
+      curl::handle_setopt(h, timeout = timeout)
+      res <- curl::curl_fetch_memory(url, handle = h)
+      res$status_code == 200
 
-  }, error = function(e) FALSE)
+    }, error = function(e) FALSE)
 }
 
 #' Generate Talking Head Video (Speech-to-Video)
 #'
 #' Generate an audio-driven talking head video from a portrait image and audio.
-#' Supports multiple backends: SadTalker (default) or WanGP (Hunyuan/Fantasy/LTX-2).
+#' Supports multiple backends: SadTalker (default), WanGP, or fal.ai.
 #'
 #' @param image Path to portrait image (PNG/JPG, front-facing) or base64 string
 #' @param audio Path to speech audio file (WAV/MP3) or base64 string
 #' @param output Path for output video file (default: "stv_output.mp4")
-#' @param backend Backend to use: "sadtalker" (default) or "wan2gp"
+#' @param backend Backend to use: "sadtalker" (default), "wan2gp", or "fal"
 #' @param model Model for wan2gp backend: "hunyuan" (real faces), "fantasy" (stylized),
-#'   or "ltx2" (general). Ignored for sadtalker.
+#'   or "ltx2" (general). For fal: "fal-ai/sadtalker" (default). Ignored for sadtalker.
 #' @param face_id Cached face ID for sadtalker (use instead of image for faster generation)
 #' @param enhance Apply GFPGAN face enhancement (sadtalker only)
 #' @param prompt Text prompt describing the scene (wan2gp only)
@@ -161,19 +168,38 @@ stv_available <- function(port = NULL, timeout = 2) {
 #'       prompt = "Person speaking into microphone")
 #' }
 #' @export
-stv <- function(image = NULL, audio, output = "stv_output.mp4",
-                backend = c("sadtalker", "wan2gp"),
-                model = c("hunyuan", "fantasy", "ltx2"),
-                face_id = NULL, enhance = FALSE,
-                prompt = "Person speaking",
-                width = 832L, height = 832L, num_frames = 129L,
-                seed = NULL, device = "cuda", timeout = 600) {
+stv <- function(
+  image = NULL,
+  audio,
+  output = "stv_output.mp4",
+  backend = c("sadtalker", "wan2gp", "fal"),
+  model = NULL,
+  face_id = NULL,
+  enhance = FALSE,
+  prompt = "Person speaking",
+  width = 832L,
+  height = 832L,
+  num_frames = 129L,
+  seed = NULL,
+  device = "cuda",
+  timeout = 600
+) {
 
   backend <- match.arg(backend)
 
-  if (backend == "wan2gp") {
+  if (backend == "fal") {
+    # fal.ai backend (SadTalker, etc.)
+    .stv_fal(
+      image = image,
+      audio = audio,
+      output = output,
+      model = model,
+      timeout = timeout
+    )
+  } else if (backend == "wan2gp") {
     # WanGP backend (Hunyuan/Fantasy/LTX-2)
-    model <- match.arg(model)
+    model <- model %||% "hunyuan"
+    model <- match.arg(model, c("hunyuan", "fantasy", "ltx2"))
 
     if (is.null(image)) {
       stop("'image' is required for wan2gp backend", call. = FALSE)
@@ -265,7 +291,11 @@ stv <- function(image = NULL, audio, output = "stv_output.mp4",
 #'   stv(face_id = face$id, audio = "speech.wav")
 #' }
 #' @export
-stv_face_create <- function(image, name = NULL, device = "cuda") {
+stv_face_create <- function(
+  image,
+  name = NULL,
+  device = "cuda"
+) {
   if (!file.exists(image)) {
     stop("Image file not found: ", image, call. = FALSE)
   }
@@ -348,3 +378,47 @@ stv_face_delete <- function(face_id) {
 
   jsonlite::fromJSON(rawToChar(response$content), simplifyVector = FALSE)
 }
+
+#' Speech-to-video via fal.ai
+#' @keywords internal
+.stv_fal <- function(
+  image,
+  audio,
+  output = "stv_output.mp4",
+  model = NULL,
+  timeout = 600
+) {
+
+  if (!.xtx_has_fal()) {
+    stop(
+      "fal.api package is not installed.\n",
+      "Install with: remotes::install_github(\"cornball-ai/fal.api\")",
+      call. = FALSE
+    )
+  }
+
+  if (is.null(image)) {
+    stop("'image' is required for fal backend", call. = FALSE)
+  }
+
+  # Default model
+  model <- model %||% "fal-ai/sadtalker"
+
+  # Call fal.api::fal_lipsync
+  result <- fal.api::fal_lipsync(
+    image = image,
+    audio = audio,
+    model = model,
+    .timeout = timeout
+  )
+
+  # Save video to output file
+  if (!is.null(result$video$url)) {
+    video_response <- curl::curl_fetch_memory(result$video$url)
+    writeBin(video_response$content, output)
+    message("STV video saved to: ", output)
+  }
+
+  invisible(output)
+}
+

@@ -14,8 +14,13 @@
 #' @param container Docker image name (default: "wan2gp:blackwell")
 #' @return Invisibly returns previous settings as a list
 #' @export
-wan2gp_config <- function(workspace = NULL, cache = NULL, output_dir = NULL,
-                          profile = NULL, container = NULL) {
+wan2gp_config <- function(
+  workspace = NULL,
+  cache = NULL,
+  output_dir = NULL,
+  profile = NULL,
+  container = NULL
+) {
   old <- list(
     workspace = getOption("xtx.wan2gp.workspace"),
     cache = getOption("xtx.wan2gp.cache"),
@@ -138,24 +143,26 @@ wan2gp_models <- function() {
 #' @param timeout Timeout in seconds
 #' @return Output file path
 #' @keywords internal
-.wan2gp_generate <- function(prompt,
-                              model = "ltx2",
-                              image = NULL,
-                              audio = NULL,
-                              video = NULL,
-                              output = NULL,
-                              width = 832L,
-                              height = 832L,
-                              num_frames = 129L,
-                              steps = NULL,
-                              guidance_scale = NULL,
-                              seed = NULL,
-                              timeout = 600) {
+.wan2gp_generate <- function(
+  prompt,
+  model = "ltx2",
+  image = NULL,
+  audio = NULL,
+  video = NULL,
+  output = NULL,
+  width = 832L,
+  height = 832L,
+  num_frames = 129L,
+  steps = NULL,
+  guidance_scale = NULL,
+  seed = NULL,
+  timeout = 600
+) {
 
   # Validate model
   if (!model %in% names(.wan2gp_models)) {
     stop("Unknown model: ", model, ". Use one of: ",
-         paste(names(.wan2gp_models), collapse = ", "), call. = FALSE)
+      paste(names(.wan2gp_models), collapse = ", "), call. = FALSE)
   }
   model_def <- .wan2gp_models[[model]]
 
@@ -274,11 +281,13 @@ wan2gp_models <- function() {
     stop("WanGP did not produce output. Check docker logs.", call. = FALSE)
   }
 
+  # Sort by mtime descending to get the latest (concatenated) file
+  new_files <- new_files[order(file.info(new_files)$mtime, decreasing = TRUE)]
   generated_file <- new_files[1]
 
   # Copy to requested output path
   if (!identical(normalizePath(generated_file, mustWork = FALSE),
-                 normalizePath(output, mustWork = FALSE))) {
+      normalizePath(output, mustWork = FALSE))) {
     file.copy(generated_file, output, overwrite = TRUE)
     message("Video saved to: ", output)
   } else {
@@ -291,9 +300,19 @@ wan2gp_models <- function() {
 
 #' Build WanGP Config
 #' @keywords internal
-.wan2gp_build_config <- function(prompt, model_def, image_path, audio_path, video_path,
-                                  width, height, num_frames, steps,
-                                  guidance_scale, seed) {
+.wan2gp_build_config <- function(
+  prompt,
+  model_def,
+  image_path,
+  audio_path,
+  video_path,
+  width,
+  height,
+  num_frames,
+  steps,
+  guidance_scale,
+  seed
+) {
 
   config <- list(
     model_type = model_def$model_type,
@@ -340,8 +359,15 @@ wan2gp_models <- function() {
 
 #' Build Docker Command
 #' @keywords internal
-.wan2gp_build_docker_cmd <- function(config_file, input_dir, output_dir,
-                                      workspace, cache, profile, container) {
+.wan2gp_build_docker_cmd <- function(
+  config_file,
+  input_dir,
+  output_dir,
+  workspace,
+  cache,
+  profile,
+  container
+) {
   volumes <- c(
     paste0("-v ", workspace, ":/workspace"),
     paste0("-v ", cache, ":/home/user/.cache/huggingface"),
@@ -369,8 +395,9 @@ wan2gp_models <- function() {
 wan2gp_available <- function() {
   cfg <- .wan2gp_get_config()
   result <- tryCatch({
-    exit_code <- system(paste("docker image inspect", cfg$container, "> /dev/null 2>&1"))
-    exit_code == 0
-  }, error = function(e) FALSE)
+      exit_code <- system(paste("docker image inspect", cfg$container, "> /dev/null 2>&1"))
+      exit_code == 0
+    }, error = function(e) FALSE)
   result
 }
+

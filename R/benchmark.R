@@ -30,7 +30,11 @@
 #' }
 #'
 #' @export
-benchmark <- function(expr, times = 1L, verbose = TRUE) {
+benchmark <- function(
+  expr,
+  times = 1L,
+  verbose = TRUE
+) {
   times <- as.integer(times)
   if (times < 1) times <- 1L
 
@@ -82,7 +86,11 @@ benchmark <- function(expr, times = 1L, verbose = TRUE) {
 #' }
 #'
 #' @export
-compare_backends <- function(prompt, backends = NULL, ...) {
+compare_backends <- function(
+  prompt,
+  backends = NULL,
+  ...
+) {
   if (is.null(backends)) {
     backends <- c("openai", "diffuser", "diffusers_api")
   }
@@ -101,23 +109,24 @@ compare_backends <- function(prompt, backends = NULL, ...) {
     elapsed <- NA_real_
 
     tryCatch({
-      start <- Sys.time()
-      tti(prompt, backend = backend, ...)
-      end <- Sys.time()
-      elapsed <- as.numeric(difftime(end, start, units = "secs"))
-    }, error = function(e) {
-      status <<- paste("error:", e$message)
-    })
+        start <- Sys.time()
+        tti(prompt, backend = backend, ...)
+        end <- Sys.time()
+        elapsed <- as.numeric(difftime(end, start, units = "secs"))
+      }, error = function(e) {
+        status <<- paste("error:", e$message)
+      })
 
     results <- rbind(results, data.frame(
-      backend = backend,
-      elapsed = elapsed,
-      status = status,
-      stringsAsFactors = FALSE
-    ))
+        backend = backend,
+        elapsed = elapsed,
+        status = status,
+        stringsAsFactors = FALSE
+      ))
   }
 
   message("\nResults:")
   print(results)
   invisible(results)
 }
+

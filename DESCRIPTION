@@ -20,7 +20,9 @@ Imports:
     jsonlite
 Suggests:
     diffuseR,
+    fal.api,
     gpu.ctl,
     rife,
     tinytest,
     torch
+RoxygenNote: 7.3.3

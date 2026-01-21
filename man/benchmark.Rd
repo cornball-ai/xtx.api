@@ -21,8 +21,7 @@ A list with:
   \item{total}{Total elapsed time}
 }
 \description{
-Run a generation function and return timing information along with
-results.
+Run a generation function and return timing information along with results.
 }
 \examples{
 \dontrun{

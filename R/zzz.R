@@ -1,6 +1,9 @@
 # Package initialization
 
-.onLoad <- function(libname, pkgname) {
+.onLoad <- function(
+  libname,
+  pkgname
+) {
   op <- options()
   op_xtx <- list(
     # OpenAI API settings
@@ -21,4 +24,8 @@
 }
 
 # Null coalescing operator
-`%||%` <- function(x, y) if (is.null(x)) y else x
+`%||%` <- function(
+  x,
+  y
+) if (is.null(x)) y else x
+

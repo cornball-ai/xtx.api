@@ -58,18 +58,20 @@
 #' }
 #'
 #' @export
-ip_adapter <- function(prompt,
-                       reference_image,
-                       ip_adapter_type = c("faceid", "faceid-plus", "face", "plus", "standard"),
-                       model = "stabilityai/stable-diffusion-xl-base-1.0",
-                       ip_adapter_scale = 0.6,
-                       negative_prompt = "lowres, bad anatomy, worst quality, low quality",
-                       steps = 30,
-                       guidance_scale = 7.5,
-                       width = 1024,
-                       height = 1024,
-                       file = NULL,
-                       timeout = 300) {
+ip_adapter <- function(
+  prompt,
+  reference_image,
+  ip_adapter_type = c("faceid", "faceid-plus", "face", "plus", "standard"),
+  model = "stabilityai/stable-diffusion-xl-base-1.0",
+  ip_adapter_scale = 0.6,
+  negative_prompt = "lowres, bad anatomy, worst quality, low quality",
+  steps = 30,
+  guidance_scale = 7.5,
+  width = 1024,
+  height = 1024,
+  file = NULL,
+  timeout = 300
+) {
 
   if (!is.character(prompt) || length(prompt) != 1 || nchar(prompt) == 0) {
     stop("'prompt' must be a non-empty character string", call. = FALSE)
@@ -136,7 +138,7 @@ ip_adapter_types <- function() {
 .image_to_base64 <- function(image) {
   # If already base64 (no file extension, long string), return as-is
 
-if (is.character(image) && nchar(image) > 500 && !grepl("\\.[a-zA-Z]+$", image)) {
+  if (is.character(image) && nchar(image) > 500 && !grepl("\\.[a-zA-Z]+$", image)) {
     return(image)
   }
 
@@ -150,18 +152,20 @@ if (is.character(image) && nchar(image) > 500 && !grepl("\\.[a-zA-Z]+$", image))
 }
 
 #' @keywords internal
-.ip_adapter_api <- function(prompt,
-                            reference_image,
-                            ip_adapter_type,
-                            model,
-                            ip_adapter_scale,
-                            negative_prompt,
-                            steps,
-                            guidance_scale,
-                            width,
-                            height,
-                            file,
-                            timeout) {
+.ip_adapter_api <- function(
+  prompt,
+  reference_image,
+  ip_adapter_type,
+  model,
+  ip_adapter_scale,
+  negative_prompt,
+  steps,
+  guidance_scale,
+  width,
+  height,
+  file,
+  timeout
+) {
 
   base <- .tti_get_base()
   url <- paste0(base, "/ip-adapter")
@@ -181,7 +185,7 @@ if (is.character(image) && nchar(image) > 500 && !grepl("\\.[a-zA-Z]+$", image))
 
   h <- curl::new_handle()
   curl::handle_setopt(h, timeout = timeout, post = TRUE,
-                      postfields = jsonlite::toJSON(body, auto_unbox = TRUE))
+    postfields = jsonlite::toJSON(body, auto_unbox = TRUE))
   curl::handle_setheaders(h, "Content-Type" = "application/json")
 
   response <- tryCatch(
@@ -191,9 +195,9 @@ if (is.character(image) && nchar(image) > 500 && !grepl("\\.[a-zA-Z]+$", image))
 
   if (response$status_code != 200) {
     err_msg <- tryCatch({
-      err <- jsonlite::fromJSON(rawToChar(response$content))
-      if (!is.null(err$detail)) err$detail else rawToChar(response$content)
-    }, error = function(e) rawToChar(response$content))
+        err <- jsonlite::fromJSON(rawToChar(response$content))
+        if (!is.null(err$detail)) err$detail else rawToChar(response$content)
+      }, error = function(e) rawToChar(response$content))
     stop("IP-Adapter generation failed: ", err_msg, call. = FALSE)
   }
 
@@ -243,7 +247,13 @@ if (is.character(image) && nchar(image) > 500 && !grepl("\\.[a-zA-Z]+$", image))
 #' }
 #'
 #' @export
-ip_adapter_face <- function(prompt, face_image, file, scale = 0.6, ...) {
+ip_adapter_face <- function(
+  prompt,
+  face_image,
+  file,
+  scale = 0.6,
+  ...
+) {
   ip_adapter(
     prompt = prompt,
     reference_image = face_image,
@@ -276,7 +286,13 @@ ip_adapter_face <- function(prompt, face_image, file, scale = 0.6, ...) {
 #' }
 #'
 #' @export
-ip_adapter_style <- function(prompt, style_image, file, scale = 0.8, ...) {
+ip_adapter_style <- function(
+  prompt,
+  style_image,
+  file,
+  scale = 0.8,
+  ...
+) {
   ip_adapter(
     prompt = prompt,
     reference_image = style_image,
@@ -286,3 +302,4 @@ ip_adapter_style <- function(prompt, style_image, file, scale = 0.8, ...) {
     ...
   )
 }
+

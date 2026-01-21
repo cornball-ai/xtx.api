@@ -15,8 +15,8 @@ stv_available(port = NULL, timeout = 2)
 TRUE if service is available, FALSE otherwise
 }
 \description{
-Quick check if the SadTalker API is reachable and healthy. Unlike
-stv_health(), this returns TRUE/FALSE and never throws errors.
+Quick check if the SadTalker API is reachable and healthy.
+Unlike stv_health(), this returns TRUE/FALSE and never throws errors.
 }
 \examples{
 \dontrun{

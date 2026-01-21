@@ -15,7 +15,10 @@
 #' @param devices Device configuration
 #' @return List with pipeline, model_name, devices
 #' @keywords internal
-.xtx_get_diffuser_pipeline <- function(model_name, devices) {
+.xtx_get_diffuser_pipeline <- function(
+  model_name,
+  devices
+) {
   # Create cache key from model and devices
   devices_str <- if (is.list(devices)) {
     paste(names(devices), unlist(devices), sep = "=", collapse = "_")
@@ -28,8 +31,16 @@
     message("Loading diffuseR pipeline for ", model_name, "...")
 
     # Determine unet dtype based on device
-    unet_device <- if (is.list(devices)) devices$unet else devices
-    unet_dtype <- if (unet_device == "cuda") "float16" else NULL
+    if (is.list(devices)) {
+      unet_device <- devices$unet
+    } else {
+      unet_device <- devices
+    }
+    if (unet_device == "cuda") {
+      unet_dtype <- "float16"
+    } else {
+      unet_dtype <- NULL
+    }
 
     m2d <- diffuseR::models2devices(
       model_name = model_name,
@@ -63,3 +74,4 @@ clear_diffuser_cache <- function() {
   rm(list = ls(.diffuser_cache), envir = .diffuser_cache)
   invisible(NULL)
 }
+

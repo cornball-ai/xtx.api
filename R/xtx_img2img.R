@@ -43,21 +43,23 @@
 #' }
 #'
 #' @export
-xtx_img_edit <- function(image,
-                         prompt,
-                         backend = c("openai", "diffuser"),
-                         model = NULL,
-                         mask = NULL,
-                         negative_prompt = NULL,
-                         size = "1024x1024",
-                         strength = 0.8,
-                         steps = 50,
-                         guidance_scale = 7.5,
-                         seed = NULL,
-                         devices = "cpu",
-                         n = 1,
-                         response_format = "url",
-                         file = NULL) {
+xtx_img_edit <- function(
+  image,
+  prompt,
+  backend = c("openai", "diffuser"),
+  model = NULL,
+  mask = NULL,
+  negative_prompt = NULL,
+  size = "1024x1024",
+  strength = 0.8,
+  steps = 50,
+  guidance_scale = 7.5,
+  seed = NULL,
+  devices = "cpu",
+  n = 1,
+  response_format = "url",
+  file = NULL
+) {
 
   # Validate inputs
   if (!file.exists(image)) {
@@ -99,14 +101,16 @@ xtx_img_edit <- function(image,
 
 #' Image edit via OpenAI DALL-E
 #' @keywords internal
-.xtx_img_edit_openai <- function(image,
-                                  prompt,
-                                  model = NULL,
-                                  mask = NULL,
-                                  size = "1024x1024",
-                                  n = 1,
-                                  response_format = "url",
-                                  file = NULL) {
+.xtx_img_edit_openai <- function(
+  image,
+  prompt,
+  model = NULL,
+  mask = NULL,
+  size = "1024x1024",
+  n = 1,
+  response_format = "url",
+  file = NULL
+) {
 
   if (!is.null(mask) && !file.exists(mask)) {
     stop("Mask file not found: ", mask, call. = FALSE)
@@ -148,17 +152,19 @@ xtx_img_edit <- function(image,
 
 #' Image edit via diffuseR img2img
 #' @keywords internal
-.xtx_img_edit_diffuser <- function(image,
-                                    prompt,
-                                    model = NULL,
-                                    negative_prompt = NULL,
-                                    size = "512x512",
-                                    strength = 0.8,
-                                    steps = 50,
-                                    guidance_scale = 7.5,
-                                    seed = NULL,
-                                    devices = "cpu",
-                                    file = NULL) {
+.xtx_img_edit_diffuser <- function(
+  image,
+  prompt,
+  model = NULL,
+  negative_prompt = NULL,
+  size = "512x512",
+  strength = 0.8,
+  steps = 50,
+  guidance_scale = 7.5,
+  seed = NULL,
+  devices = "cpu",
+  file = NULL
+) {
 
   if (!.xtx_has_diffuser()) {
     stop(
@@ -182,7 +188,7 @@ xtx_img_edit <- function(image,
   )
 
   # Parse size
-  dims <- as.integer(strsplit(size, "x")[[1]])
+  dims <- as.integer(strsplit(size, "x") [[1]])
   img_dim <- dims[1]
 
   # Determine save behavior
@@ -194,23 +200,23 @@ xtx_img_edit <- function(image,
 
   # Call diffuseR::img2img with cached pipeline
   torch::with_no_grad({
-    result <- diffuseR::img2img(
-      input_image = image,
-      prompt = prompt,
-      model_name = diffuser_model,
-      pipeline = p$pipeline,
-      devices = p$devices,
-      unet_dtype_str = p$unet_dtype,
-      negative_prompt = negative_prompt,
-      img_dim = img_dim,
-      num_inference_steps = as.integer(steps),
-      strength = strength,
-      guidance_scale = guidance_scale,
-      seed = seed,
-      save_file = save_file,
-      filename = filename
-    )
-  })
+      result <- diffuseR::img2img(
+        input_image = image,
+        prompt = prompt,
+        model_name = diffuser_model,
+        pipeline = p$pipeline,
+        devices = p$devices,
+        unet_dtype_str = p$unet_dtype,
+        negative_prompt = negative_prompt,
+        img_dim = img_dim,
+        num_inference_steps = as.integer(steps),
+        strength = strength,
+        guidance_scale = guidance_scale,
+        seed = seed,
+        save_file = save_file,
+        filename = filename
+      )
+    })
 
   # Normalize return structure
   list(
@@ -246,12 +252,14 @@ xtx_img_edit <- function(image,
 #' }
 #'
 #' @export
-xtx_img_variation <- function(image,
-                              model = "dall-e-2",
-                              size = "1024x1024",
-                              n = 1,
-                              response_format = "url",
-                              file = NULL) {
+xtx_img_variation <- function(
+  image,
+  model = "dall-e-2",
+  size = "1024x1024",
+  n = 1,
+  response_format = "url",
+  file = NULL
+) {
 
   if (!file.exists(image)) {
     stop("Image file not found: ", image, call. = FALSE)
@@ -283,3 +291,4 @@ xtx_img_variation <- function(image,
 
   result
 }
+

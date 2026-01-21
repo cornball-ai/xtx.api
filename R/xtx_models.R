@@ -27,7 +27,7 @@ xtx_models <- function() {
     models <- result$data
     # Try to filter for DALL-E / image models
     if (is.data.frame(models) && "id" %in% names(models)) {
-      image_models <- models[grepl("dall-e|image|diffusion", models$id, ignore.case = TRUE), ]
+      image_models <- models[grepl("dall-e|image|diffusion", models$id, ignore.case = TRUE),]
       if (nrow(image_models) > 0) {
         return(image_models)
       }
@@ -80,7 +80,7 @@ xtx_supported_models <- function(backend = NULL) {
 
   if (!is.null(backend)) {
     backend <- match.arg(backend, c("openai", "diffuser"))
-    models <- models[models$backend == backend, ]
+    models <- models[models$backend == backend,]
   }
 
   models
@@ -110,3 +110,4 @@ xtx_backends <- function() {
     )
   )
 }
+

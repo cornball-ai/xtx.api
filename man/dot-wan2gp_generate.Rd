@@ -51,7 +51,7 @@
 Output file path
 }
 \description{
-Low-level function to generate video via WanGP Docker container. Use
-itv(), stv(), ttv(), or vtv() instead.
+Low-level function to generate video via WanGP Docker container.
+Use itv(), stv(), ttv(), or vtv() instead.
 }
 \keyword{internal}

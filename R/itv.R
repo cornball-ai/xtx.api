@@ -37,7 +37,11 @@ itv_base <- function(url) {
 
 #' POST JSON to ITV API
 #' @keywords internal
-.itv_post_json <- function(endpoint, body, timeout = NULL) {
+.itv_post_json <- function(
+  endpoint,
+  body,
+  timeout = NULL
+) {
   base <- .itv_get_base()
   url <- paste0(base, endpoint)
 
@@ -100,14 +104,14 @@ itv_health <- function() {
 #' Generate Video from Image (Image-to-Video)
 #'
 #' Generate a video from an input image and motion prompt.
-#' Supports multiple backends: CogVideoX (diffusers_api) or WanGP (LTX-2).
+#' Supports multiple backends: CogVideoX, WanGP, or fal.ai.
 #'
 #' @param image Path to starting frame image (PNG/JPG) or base64 string
 #' @param prompt Motion/scene description
 #' @param output Path for output video file (default: "itv_output.mp4")
-#' @param backend Backend to use: "cogvideo" (default) or "wan2gp"
+#' @param backend Backend to use: "cogvideo" (default), "wan2gp", or "fal"
 #' @param model Model ID. For cogvideo: "THUDM/CogVideoX-5b-I2V".
-#'   For wan2gp: "ltx2" (default)
+#'   For wan2gp: "ltx2" (default). For fal: "fal-ai/ltx-video" (default)
 #' @param num_frames Number of frames to generate (default: 49 for cogvideo, 129 for wan2gp)
 #' @param num_steps Number of inference steps (default varies by backend/model)
 #' @param width Video width (wan2gp only, default: 832)
@@ -126,17 +130,33 @@ itv_health <- function() {
 #'       backend = "wan2gp", model = "ltx2")
 #' }
 #' @export
-itv <- function(image, prompt = "", output = "itv_output.mp4",
-                backend = c("cogvideo", "wan2gp"),
-                model = NULL,
-                num_frames = NULL, num_steps = NULL,
-                width = 832L, height = 832L,
-                guidance_scale = NULL, seed = NULL,
-                timeout = 900) {
+itv <- function(
+  image,
+  prompt = "",
+  output = "itv_output.mp4",
+  backend = c("cogvideo", "wan2gp", "fal"),
+  model = NULL,
+  num_frames = NULL,
+  num_steps = NULL,
+  width = 832L,
+  height = 832L,
+  guidance_scale = NULL,
+  seed = NULL,
+  timeout = 900
+) {
 
   backend <- match.arg(backend)
 
-  if (backend == "wan2gp") {
+  if (backend == "fal") {
+    # fal.ai backend (LTX-2, etc.)
+    .itv_fal(
+      image = image,
+      prompt = prompt,
+      output = output,
+      model = model,
+      timeout = timeout
+    )
+  } else if (backend == "wan2gp") {
     # WanGP backend (LTX-2)
     model <- model %||% "ltx2"
     num_frames <- num_frames %||% 129L
@@ -223,3 +243,43 @@ itv_models <- function() {
 
   jsonlite::fromJSON(rawToChar(response$content))
 }
+
+#' Image-to-video via fal.ai
+#' @keywords internal
+.itv_fal <- function(
+  image,
+  prompt = "",
+  output = "itv_output.mp4",
+  model = NULL,
+  timeout = 600
+) {
+
+  if (!.xtx_has_fal()) {
+    stop(
+      "fal.api package is not installed.\n",
+      "Install with: remotes::install_github(\"cornball-ai/fal.api\")",
+      call. = FALSE
+    )
+  }
+
+  # Default model
+  model <- model %||% "fal-ai/ltx-video"
+
+  # Call fal.api::fal_itv
+  result <- fal.api::fal_itv(
+    image = image,
+    prompt = prompt,
+    model = model,
+    .timeout = timeout
+  )
+
+  # Save video to output file
+  if (!is.null(result$video$url)) {
+    video_response <- curl::curl_fetch_memory(result$video$url)
+    writeBin(video_response$content, output)
+    message("ITV video saved to: ", output)
+  }
+
+  invisible(output)
+}
+

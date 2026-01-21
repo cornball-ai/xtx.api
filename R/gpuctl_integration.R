@@ -23,7 +23,7 @@
 #' @noRd
 .gpuctl_enabled <- function() {
   isTRUE(getOption("xtx.gpuctl", FALSE)) &&
-    requireNamespace("gpu.ctl", quietly = TRUE)
+  requireNamespace("gpu.ctl", quietly = TRUE)
 }
 
 #' Register xtx.api services with gpu.ctl
@@ -34,20 +34,20 @@
   for (name in names(.xtx_gpu_services)) {
     svc <- .xtx_gpu_services[[name]]
     tryCatch({
-      # Only register if not already registered
-      existing <- gpu.ctl::gpu_services()
-      if (!name %in% existing$name) {
-        gpu.ctl::gpu_register(
-          name = name,
-          port = svc$port,
-          vram = svc$vram,
-          container = svc$container,
-          health_endpoint = svc$health
-        )
-      }
-    }, error = function(e) {
-      # Silently ignore registration errors
-    })
+        # Only register if not already registered
+        existing <- gpu.ctl::gpu_services()
+        if (!name %in% existing$name) {
+          gpu.ctl::gpu_register(
+            name = name,
+            port = svc$port,
+            vram = svc$vram,
+            container = svc$container,
+            health_endpoint = svc$health
+          )
+        }
+      }, error = function(e) {
+        # Silently ignore registration errors
+      })
   }
   invisible(TRUE)
 }
@@ -63,10 +63,11 @@
   .gpuctl_register_services()
 
   tryCatch({
-    gpu.ctl::gpu_acquire(service)
-    invisible(TRUE)
-  }, error = function(e) {
-    warning("gpu.ctl: ", e$message, call. = FALSE)
-    invisible(FALSE)
-  })
+      gpu.ctl::gpu_acquire(service)
+      invisible(TRUE)
+    }, error = function(e) {
+      warning("gpu.ctl: ", e$message, call. = FALSE)
+      invisible(FALSE)
+    })
 }
+

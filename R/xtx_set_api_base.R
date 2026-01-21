@@ -21,8 +21,9 @@ xtx_set_api_base <- function(url) {
   if (!is.character(url) || length(url) != 1 || nchar(url) == 0) {
     stop("'url' must be a non-empty character string", call. = FALSE)
   }
-  url <- sub("/$", "", url)  # Remove trailing slash
+  url <- sub("/$", "", url) # Remove trailing slash
   old <- getOption("xtx.api_base")
   options(xtx.api_base = url)
   invisible(old)
 }
+

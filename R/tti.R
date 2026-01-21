@@ -43,11 +43,13 @@ tti_base <- function(url) {
 #'   - "openai": DALL-E API (requires API key)
 #'   - "diffuseR": Local diffuseR package
 #'   - "diffusers_api": HTTP API (Z-Image-Turbo, SD)
+#'   - "fal": fal.ai API (FLUX, SDXL - requires FAL_KEY)
 #'   - "auto": Use diffuseR if available, else openai
 #' @param model Character. Model to use. Depends on backend:
 #'   - OpenAI: "dall-e-3", "dall-e-2"
 #'   - diffuseR: "sd21", "sdxl"
 #'   - diffusers_api: "Tongyi-MAI/Z-Image-Turbo", any HF model ID
+#'   - fal: "fal-ai/flux/dev", "fal-ai/flux/schnell", "fal-ai/fast-sdxl"
 #' @param negative_prompt Character or NULL. Negative prompt (diffuseR, diffusers_api only).
 #' @param size Character. Image dimensions (e.g., "1024x1024").
 #' @param quality Character. Image quality: "standard" or "hd" (DALL-E 3 only).
@@ -100,23 +102,25 @@ tti_base <- function(url) {
 #' }
 #'
 #' @export
-tti <- function(prompt,
-                backend = c("openai", "diffuseR", "diffusers_api", "auto"),
-                model = NULL,
-                negative_prompt = NULL,
-                size = NULL,
-                quality = "standard",
-                style = "vivid",
-                n = 1,
-                steps = 50,
-                guidance_scale = 7.5,
-                seed = NULL,
-                lora = NULL,
-                lora_scale = 0.8,
-                devices = "cpu",
-                response_format = "url",
-                file = NULL,
-                timeout = 120) {
+tti <- function(
+  prompt,
+  backend = c("openai", "diffuseR", "diffusers_api", "fal", "auto"),
+  model = NULL,
+  negative_prompt = NULL,
+  size = NULL,
+  quality = "standard",
+  style = "vivid",
+  n = 1,
+  steps = 50,
+  guidance_scale = 7.5,
+  seed = NULL,
+  lora = NULL,
+  lora_scale = 0.8,
+  devices = "cpu",
+  response_format = "url",
+  file = NULL,
+  timeout = 120
+) {
 
   if (!is.character(prompt) || length(prompt) != 1 || nchar(prompt) == 0) {
     stop("'prompt' must be a non-empty character string", call. = FALSE)
@@ -140,7 +144,19 @@ tti <- function(prompt,
   }
 
   # Dispatch to appropriate backend
-  if (backend == "diffusers_api") {
+  if (backend == "fal") {
+    .tti_fal(
+      prompt = prompt,
+      model = model,
+      negative_prompt = negative_prompt,
+      size = size,
+      steps = steps,
+      guidance_scale = guidance_scale,
+      seed = seed,
+      file = file,
+      timeout = timeout
+    )
+  } else if (backend == "diffusers_api") {
     .tti_diffusers_api(
       prompt = prompt,
       model = model,
@@ -181,16 +197,18 @@ tti <- function(prompt,
 
 #' Text-to-image via diffusers_api
 #' @keywords internal
-.tti_diffusers_api <- function(prompt,
-                                model = NULL,
-                                negative_prompt = NULL,
-                                size = NULL,
-                                steps = 50,
-                                guidance_scale = 7.5,
-                                lora = NULL,
-                                lora_scale = 0.8,
-                                file = NULL,
-                                timeout = 120) {
+.tti_diffusers_api <- function(
+  prompt,
+  model = NULL,
+  negative_prompt = NULL,
+  size = NULL,
+  steps = 50,
+  guidance_scale = 7.5,
+  lora = NULL,
+  lora_scale = 0.8,
+  file = NULL,
+  timeout = 120
+) {
 
   base <- .tti_get_base()
   url <- paste0(base, "/text-to-image")
@@ -203,7 +221,7 @@ tti <- function(prompt,
     width <- 1024L
     height <- 1024L
   } else {
-    dims <- as.integer(strsplit(size, "x")[[1]])
+    dims <- as.integer(strsplit(size, "x") [[1]])
     width <- dims[1]
     height <- dims[2]
   }
@@ -271,14 +289,16 @@ tti <- function(prompt,
 
 #' Text-to-image via OpenAI DALL-E
 #' @keywords internal
-.tti_openai <- function(prompt,
-                        model = NULL,
-                        size = NULL,
-                        quality = "standard",
-                        style = "vivid",
-                        n = 1,
-                        response_format = "url",
-                        file = NULL) {
+.tti_openai <- function(
+  prompt,
+  model = NULL,
+  size = NULL,
+  quality = "standard",
+  style = "vivid",
+  n = 1,
+  response_format = "url",
+  file = NULL
+) {
 
   model <- model %||% "dall-e-3"
   model <- match.arg(model, c("dall-e-3", "dall-e-2"))
@@ -290,13 +310,13 @@ tti <- function(prompt,
     size <- size %||% "1024x1024"
     if (!size %in% valid_sizes_dalle3) {
       stop("For DALL-E 3, size must be one of: ",
-           paste(valid_sizes_dalle3, collapse = ", "), call. = FALSE)
+        paste(valid_sizes_dalle3, collapse = ", "), call. = FALSE)
     }
   } else {
     size <- size %||% "1024x1024"
     if (!size %in% valid_sizes_dalle2) {
       stop("For DALL-E 2, size must be one of: ",
-           paste(valid_sizes_dalle2, collapse = ", "), call. = FALSE)
+        paste(valid_sizes_dalle2, collapse = ", "), call. = FALSE)
     }
   }
 
@@ -321,7 +341,7 @@ tti <- function(prompt,
 
   if (!is.null(result$parse_error)) {
     stop("Failed to parse API response: ", result$parse_error,
-         "\nRaw content: ", substr(result$raw_content, 1, 200), call. = FALSE)
+      "\nRaw content: ", substr(result$raw_content, 1, 200), call. = FALSE)
   }
 
   result$backend <- "openai"
@@ -335,15 +355,17 @@ tti <- function(prompt,
 
 #' Text-to-image via diffuseR
 #' @keywords internal
-.tti_diffuser <- function(prompt,
-                          model = NULL,
-                          negative_prompt = NULL,
-                          size = NULL,
-                          steps = 50,
-                          guidance_scale = 7.5,
-                          seed = NULL,
-                          devices = "cpu",
-                          file = NULL) {
+.tti_diffuser <- function(
+  prompt,
+  model = NULL,
+  negative_prompt = NULL,
+  size = NULL,
+  steps = 50,
+  guidance_scale = 7.5,
+  seed = NULL,
+  devices = "cpu",
+  file = NULL
+) {
 
   if (!.xtx_has_diffuser()) {
     stop(
@@ -370,32 +392,32 @@ tti <- function(prompt,
   # Use model-specific function with cached pipeline
   # Wrap in no_grad to prevent gradient tracking during inference
   torch::with_no_grad({
-    if (diffuser_model == "sdxl") {
-      diffuseR::txt2img_sdxl(
-        prompt = prompt,
-        devices = p$devices,
-        pipeline = p$pipeline,
-        unet_dtype_str = p$unet_dtype,
-        negative_prompt = negative_prompt,
-        num_inference_steps = as.integer(steps),
-        guidance_scale = guidance_scale,
-        seed = seed,
-        filename = file
-      )
-    } else {
-      diffuseR::txt2img_sd21(
-        prompt = prompt,
-        devices = p$devices,
-        pipeline = p$pipeline,
-        unet_dtype_str = p$unet_dtype,
-        negative_prompt = negative_prompt,
-        num_inference_steps = as.integer(steps),
-        guidance_scale = guidance_scale,
-        seed = seed,
-        filename = file
-      )
-    }
-  })
+      if (diffuser_model == "sdxl") {
+        diffuseR::txt2img_sdxl(
+          prompt = prompt,
+          devices = p$devices,
+          pipeline = p$pipeline,
+          unet_dtype_str = p$unet_dtype,
+          negative_prompt = negative_prompt,
+          num_inference_steps = as.integer(steps),
+          guidance_scale = guidance_scale,
+          seed = seed,
+          filename = file
+        )
+      } else {
+        diffuseR::txt2img_sd21(
+          prompt = prompt,
+          devices = p$devices,
+          pipeline = p$pipeline,
+          unet_dtype_str = p$unet_dtype,
+          negative_prompt = negative_prompt,
+          num_inference_steps = as.integer(steps),
+          guidance_scale = guidance_scale,
+          seed = seed,
+          filename = file
+        )
+      }
+    })
 
   list(
     data = list(
@@ -407,3 +429,91 @@ tti <- function(prompt,
     backend = "diffuseR"
   )
 }
+
+#' Text-to-image via fal.ai
+#' @keywords internal
+.tti_fal <- function(
+  prompt,
+  model = NULL,
+  negative_prompt = NULL,
+  size = NULL,
+  steps = 50,
+  guidance_scale = 7.5,
+  seed = NULL,
+  file = NULL,
+  timeout = 300
+) {
+
+  if (!.xtx_has_fal()) {
+    stop(
+      "fal.api package is not installed.\n",
+      "Install with: remotes::install_github(\"cornball-ai/fal.api\")",
+      call. = FALSE
+    )
+  }
+
+  # Default model
+  model <- model %||% "fal-ai/flux/schnell"
+
+  # Build parameters for fal.api
+  params <- list(prompt = prompt)
+
+  if (!is.null(negative_prompt) && nchar(negative_prompt) > 0) {
+    params$negative_prompt <- negative_prompt
+  }
+
+  if (!is.null(size)) {
+    params$image_size <- size
+  }
+
+  if (!is.null(steps)) {
+    params$num_inference_steps <- as.integer(steps)
+  }
+
+  if (!is.null(guidance_scale)) {
+    params$guidance_scale <- guidance_scale
+  }
+
+  if (!is.null(seed)) {
+    params$seed <- as.integer(seed)
+  }
+
+  # Call fal.api
+  result <- fal.api::fal_generate(
+    model = model,
+    prompt = params$prompt,
+    negative_prompt = params$negative_prompt,
+    image_size = params$image_size,
+    num_inference_steps = params$num_inference_steps,
+    guidance_scale = params$guidance_scale,
+    seed = params$seed,
+    .timeout = timeout
+  )
+
+  # Save to file if requested
+  if (!is.null(file) && !is.null(result$images) && length(result$images) > 0) {
+    img_url <- result$images[[1]]$url
+    if (!is.null(img_url)) {
+      img_response <- curl::curl_fetch_memory(img_url)
+      writeBin(img_response$content, file)
+      message("Image saved to: ", file)
+    }
+  }
+
+  # Normalize response structure
+  list(
+    data = lapply(result$images %||% list(), function(img) {
+        list(url = img$url, revised_prompt = NULL)
+      }),
+    images = result$images,
+    seed = result$seed,
+    backend = "fal"
+  )
+}
+
+#' Check if fal.api is available
+#' @keywords internal
+.xtx_has_fal <- function() {
+  requireNamespace("fal.api", quietly = TRUE)
+}
+

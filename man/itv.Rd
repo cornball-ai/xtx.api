@@ -8,7 +8,7 @@ itv(
   image,
   prompt = "",
   output = "itv_output.mp4",
-  backend = c("cogvideo", "wan2gp"),
+  backend = c("cogvideo", "wan2gp", "fal"),
   model = NULL,
   num_frames = NULL,
   num_steps = NULL,
@@ -26,10 +26,10 @@ itv(
 
 \item{output}{Path for output video file (default: "itv_output.mp4")}
 
-\item{backend}{Backend to use: "cogvideo" (default) or "wan2gp"}
+\item{backend}{Backend to use: "cogvideo" (default), "wan2gp", or "fal"}
 
-\item{model}{Model ID. For cogvideo: "THUDM/CogVideoX-5b-I2V". For wan2gp: "ltx2"
-(default)}
+\item{model}{Model ID. For cogvideo: "THUDM/CogVideoX-5b-I2V".
+For wan2gp: "ltx2" (default). For fal: "fal-ai/ltx-video" (default)}
 
 \item{num_frames}{Number of frames to generate (default: 49 for cogvideo, 129 for wan2gp)}
 
@@ -49,8 +49,8 @@ itv(
 Invisibly returns the output file path
 }
 \description{
-Generate a video from an input image and motion prompt. Supports
-multiple backends: CogVideoX (diffusers_api) or WanGP (LTX-2).
+Generate a video from an input image and motion prompt.
+Supports multiple backends: CogVideoX, WanGP, or fal.ai.
 }
 \examples{
 \dontrun{

@@ -30,13 +30,21 @@
 #'       model = "ltx2", output = "enhanced.mp4")
 #' }
 #' @export
-vtv <- function(video, prompt = "", output = "vtv_output.mp4",
-                backend = "wan2gp",
-                model = c("vace", "ltx2"),
-                width = 832L, height = 832L,
-                num_frames = NULL, num_steps = NULL,
-                guidance_scale = NULL, strength = 0.5,
-                seed = NULL, timeout = 600) {
+vtv <- function(
+  video,
+  prompt = "",
+  output = "vtv_output.mp4",
+  backend = "wan2gp",
+  model = c("vace", "ltx2"),
+  width = 832L,
+  height = 832L,
+  num_frames = NULL,
+  num_steps = NULL,
+  guidance_scale = NULL,
+  strength = 0.5,
+  seed = NULL,
+  timeout = 600
+) {
 
   model <- match.arg(model)
 
@@ -46,7 +54,7 @@ vtv <- function(video, prompt = "", output = "vtv_output.mp4",
 
   # Default num_frames from source video if not specified
   if (is.null(num_frames)) {
-    num_frames <- 129L  # Default, could probe video
+    num_frames <- 129L# Default, could probe video
   }
 
   .wan2gp_generate(
@@ -63,3 +71,4 @@ vtv <- function(video, prompt = "", output = "vtv_output.mp4",
     timeout = timeout
   )
 }
+

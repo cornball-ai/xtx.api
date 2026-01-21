@@ -28,13 +28,19 @@
 #'       seed = 42, output = "mountains.mp4")
 #' }
 #' @export
-ttv <- function(prompt, output = "ttv_output.mp4",
-                backend = "wan2gp",
-                model = "ltx2",
-                width = 832L, height = 832L,
-                num_frames = 129L, num_steps = NULL,
-                guidance_scale = NULL, seed = NULL,
-                timeout = 600) {
+ttv <- function(
+  prompt,
+  output = "ttv_output.mp4",
+  backend = "wan2gp",
+  model = "ltx2",
+  width = 832L,
+  height = 832L,
+  num_frames = 129L,
+  num_steps = NULL,
+  guidance_scale = NULL,
+  seed = NULL,
+  timeout = 600
+) {
 
   if (missing(prompt) || nchar(prompt) == 0) {
     stop("'prompt' is required for text-to-video generation", call. = FALSE)
@@ -56,3 +62,4 @@ ttv <- function(prompt, output = "ttv_output.mp4",
     timeout = timeout
   )
 }
+

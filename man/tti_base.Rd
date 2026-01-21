@@ -13,8 +13,7 @@ tti_base(url)
 Invisibly returns the previous value
 }
 \description{
-Configure the base URL for the diffusers_api service (Z-Image-Turbo,
-SD).
+Configure the base URL for the diffusers_api service (Z-Image-Turbo, SD).
 }
 \examples{
 \dontrun{

@@ -6,7 +6,7 @@
 \usage{
 tti(
   prompt,
-  backend = c("openai", "diffuseR", "diffusers_api", "auto"),
+  backend = c("openai", "diffuseR", "diffusers_api", "fal", "auto"),
   model = NULL,
   negative_prompt = NULL,
   size = NULL,
@@ -27,13 +27,18 @@ tti(
 \arguments{
 \item{prompt}{Character. The text description of the image to generate.}
 
-\item{backend}{Character. Which backend to use: - "openai": DALL-E API (requires API
-key) - "diffuseR": Local diffuseR package - "diffusers_api": HTTP API
-(Z-Image-Turbo, SD) - "auto": Use diffuseR if available, else openai}
+\item{backend}{Character. Which backend to use:
+- "openai": DALL-E API (requires API key)
+- "diffuseR": Local diffuseR package
+- "diffusers_api": HTTP API (Z-Image-Turbo, SD)
+- "fal": fal.ai API (FLUX, SDXL - requires FAL_KEY)
+- "auto": Use diffuseR if available, else openai}
 
-\item{model}{Character. Model to use. Depends on backend: - OpenAI: "dall-e-3",
-"dall-e-2" - diffuseR: "sd21", "sdxl" - diffusers_api:
-"Tongyi-MAI/Z-Image-Turbo", any HF model ID}
+\item{model}{Character. Model to use. Depends on backend:
+- OpenAI: "dall-e-3", "dall-e-2"
+- diffuseR: "sd21", "sdxl"
+- diffusers_api: "Tongyi-MAI/Z-Image-Turbo", any HF model ID
+- fal: "fal-ai/flux/dev", "fal-ai/flux/schnell", "fal-ai/fast-sdxl"}
 
 \item{negative_prompt}{Character or NULL. Negative prompt (diffuseR, diffusers_api only).}
 
@@ -55,8 +60,8 @@ key) - "diffuseR": Local diffuseR package - "diffusers_api": HTTP API
 (diffusers_api only). Can be a path string for single LoRA, or a list of
 lists with `path` and `scale` elements for multiple LoRAs.}
 
-\item{lora_scale}{Numeric. Weight for single LoRA (0-1). Default 0.8. Ignored if `lora` is
-a list with explicit scales.}
+\item{lora_scale}{Numeric. Weight for single LoRA (0-1). Default 0.8.
+Ignored if `lora` is a list with explicit scales.}
 
 \item{devices}{Device configuration for diffuseR: "cpu", "cuda", or list.}
 

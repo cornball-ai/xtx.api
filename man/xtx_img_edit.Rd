@@ -29,11 +29,11 @@ xtx_img_edit(
 
 \item{backend}{Character. Which backend to use: "openai" or "diffuser".}
 
-\item{model}{Character. Model to use. For OpenAI: "dall-e-2". For diffuseR: "sd21",
-"sdxl".}
+\item{model}{Character. Model to use. For OpenAI: "dall-e-2".
+For diffuseR: "sd21", "sdxl".}
 
-\item{mask}{Character or NULL. Path to mask image (OpenAI only). Transparent areas
-indicate where to edit.}
+\item{mask}{Character or NULL. Path to mask image (OpenAI only).
+Transparent areas indicate where to edit.}
 
 \item{negative_prompt}{Character or NULL. Negative prompt (diffuseR only).}
 
