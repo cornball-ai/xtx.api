@@ -26,8 +26,33 @@ Cross-modal generation API. Part of [cornyverse](~/cornyverse).
 ## Backends
 
 - **tti**: openai (DALL-E), diffuseR (local), diffusers_api (Docker)
-- **stv**: faster-SadTalker-API (Docker)
-- **itv**: diffusers_api with CogVideoX (Docker)
+- **stv**: sadtalker (default), wan2gp_api (LTX-2), wan2gp (Docker), fal (cloud)
+- **itv**: wan2gp_api (LTX-2, recommended), cogvideo, wan2gp (Docker), fal (cloud)
+- **ttv**: wan2gp_api (LTX-2, recommended), wan2gp (Docker)
+
+## WanGP API (Recommended)
+
+The `wan2gp_api` backend connects to a FastAPI service running LTX-2 19B.
+This is the recommended approach - the service stays warm with models loaded.
+
+```r
+# Configure once
+wan2gp_api_base("http://localhost:8000")
+
+# Text-to-video
+ttv("A cat playing piano in a jazz club")
+
+# Image-to-video
+itv("scene.jpg", "Camera slowly zooms in", backend = "wan2gp_api")
+
+# Speech-to-video (talking head with audio)
+stv("portrait.jpg", "speech.wav", backend = "wan2gp_api")
+
+# Quality presets: "fast", "balanced" (default), "quality"
+ttv("Mountain sunset", quality = "quality")  # 40 steps, best quality
+```
+
+Start the service with: `docker-compose up -d` in ~/Wan2GP_api
 
 ## diffuseR Backend Notes
 

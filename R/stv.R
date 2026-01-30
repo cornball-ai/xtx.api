@@ -35,6 +35,41 @@ stv_base <- function(url) {
   base
 }
 
+#' Set WanGP API Base URL
+#'
+#' Configure the base URL for the WanGP FastAPI service.
+#'
+#' @param url Base URL (e.g., "http://localhost:8000")
+#' @return Invisibly returns the previous value
+#' @examples
+#' \dontrun{
+#'   wan2gp_api_base("http://localhost:8000")
+#'   wan2gp_api_base("http://gpu-server:8000")
+#' }
+#' @export
+wan2gp_api_base <- function(url) {
+  if (!is.character(url) || length(url) != 1 || nchar(url) == 0) {
+    stop("'url' must be a non-empty character string", call. = FALSE)
+  }
+  old <- getOption("xtx.wan2gp_api_base")
+  options(xtx.wan2gp_api_base = url)
+  invisible(old)
+}
+
+#' Get WanGP API Base URL
+#' @keywords internal
+.wan2gp_api_get_base <- function() {
+  base <- getOption("xtx.wan2gp_api_base")
+  if (is.null(base) || nchar(base) == 0) {
+    stop(
+      "WanGP API base URL not set. Use wan2gp_api_base() to configure it.\n",
+      "Example: wan2gp_api_base(\"http://localhost:8000\")",
+      call. = FALSE
+    )
+  }
+  base
+}
+
 #' POST JSON to STV API
 #' @keywords internal
 .stv_post_json <- function(
@@ -137,20 +172,25 @@ stv_available <- function(
 #' Generate Talking Head Video (Speech-to-Video)
 #'
 #' Generate an audio-driven talking head video from a portrait image and audio.
-#' Supports multiple backends: SadTalker (default), WanGP, or fal.ai.
+#' Supports multiple backends: SadTalker (default), WanGP Docker, WanGP API, or fal.ai.
 #'
 #' @param image Path to portrait image (PNG/JPG, front-facing) or base64 string
 #' @param audio Path to speech audio file (WAV/MP3) or base64 string
 #' @param output Path for output video file (default: "stv_output.mp4")
-#' @param backend Backend to use: "sadtalker" (default), "wan2gp", or "fal"
+#' @param backend Backend to use: "sadtalker" (default), "wan2gp" (Docker),
+#'   "wan2gp_api" (HTTP API), or "fal" (cloud)
 #' @param model Model for wan2gp backend: "hunyuan" (real faces), "fantasy" (stylized),
 #'   or "ltx2" (general). For fal: "fal-ai/sadtalker" (default). Ignored for sadtalker.
 #' @param face_id Cached face ID for sadtalker (use instead of image for faster generation)
 #' @param enhance Apply GFPGAN face enhancement (sadtalker only)
-#' @param prompt Text prompt describing the scene (wan2gp only)
-#' @param width Video width (wan2gp only, default: 832)
-#' @param height Video height (wan2gp only, default: 832)
-#' @param num_frames Number of frames (wan2gp only, default: 129)
+#' @param prompt Text prompt describing the scene (wan2gp and fal hunyuan-avatar)
+#' @param resolution Resolution for wan2gp_api: "480p" or "720p" (default: "720p")
+#' @param quality Quality preset for wan2gp_api: "fast", "balanced", or "quality" (default: "balanced")
+#' @param width Video width (wan2gp Docker only, default: 832)
+#' @param height Video height (wan2gp Docker only, default: 832)
+#' @param num_frames Number of frames (wan2gp and fal hunyuan-avatar, default: 129)
+#' @param num_inference_steps Number of inference steps (fal hunyuan-avatar, default: 30)
+#' @param turbo_mode Use turbo mode for faster generation (fal hunyuan-avatar, default: TRUE)
 #' @param seed Random seed (wan2gp only)
 #' @param device Device to use: "cuda" or "cpu" (sadtalker only)
 #' @param timeout Request timeout in seconds (default: 600)
@@ -160,26 +200,35 @@ stv_available <- function(
 #'   # SadTalker (default, fastest for real faces)
 #'   stv("portrait.jpg", "speech.wav", "talking.mp4")
 #'
-#'   # Hunyuan Avatar (better quality, slower, needs 24GB VRAM)
+#'   # Hunyuan Avatar via WanGP Docker (needs 24GB VRAM)
 #'   stv("portrait.jpg", "speech.wav", backend = "wan2gp", model = "hunyuan")
 #'
-#'   # LTX-2 with audio guide (16GB VRAM, fast)
-#'   stv("portrait.jpg", "speech.wav", backend = "wan2gp", model = "ltx2",
+#'   # LTX-2 via WanGP API (remote server)
+#'   wan2gp_api_base("http://gpu-server:8000")
+#'   stv("portrait.jpg", "speech.wav", backend = "wan2gp_api",
 #'       prompt = "Person speaking into microphone")
+#'
+#'   # Hunyuan Avatar via fal.ai (cloud API)
+#'   stv("portrait.jpg", "speech.wav", backend = "fal",
+#'       model = "fal-ai/hunyuan-avatar", prompt = "A person speaking")
 #' }
 #' @export
 stv <- function(
   image = NULL,
   audio,
   output = "stv_output.mp4",
-  backend = c("sadtalker", "wan2gp", "fal"),
+  backend = c("sadtalker", "wan2gp", "wan2gp_api", "fal"),
   model = NULL,
   face_id = NULL,
   enhance = FALSE,
-  prompt = "Person speaking",
+  prompt = "Person speaking naturally",
+  resolution = "720p",
+  quality = "balanced",
   width = 832L,
   height = 832L,
   num_frames = 129L,
+  num_inference_steps = 30L,
+  turbo_mode = TRUE,
   seed = NULL,
   device = "cuda",
   timeout = 600
@@ -187,13 +236,32 @@ stv <- function(
 
   backend <- match.arg(backend)
 
-  if (backend == "fal") {
-    # fal.ai backend (SadTalker, etc.)
+  if (backend == "wan2gp_api") {
+    # WanGP FastAPI backend (remote server via HTTP)
+    if (is.null(image)) {
+      stop("'image' is required for wan2gp_api backend", call. = FALSE)
+    }
+
+    .stv_wan2gp_api(
+      image = image,
+      audio = audio,
+      output = output,
+      prompt = prompt,
+      resolution = resolution,
+      quality = quality,
+      timeout = timeout
+    )
+  } else if (backend == "fal") {
+    # fal.ai backend (SadTalker, Hunyuan Avatar, etc.)
     .stv_fal(
       image = image,
       audio = audio,
       output = output,
       model = model,
+      prompt = prompt,
+      num_frames = num_frames,
+      num_inference_steps = num_inference_steps,
+      turbo_mode = turbo_mode,
       timeout = timeout
     )
   } else if (backend == "wan2gp") {
@@ -386,6 +454,10 @@ stv_face_delete <- function(face_id) {
   audio,
   output = "stv_output.mp4",
   model = NULL,
+  prompt = NULL,
+  num_frames = 129L,
+  num_inference_steps = 30L,
+  turbo_mode = TRUE,
   timeout = 600
 ) {
 
@@ -404,13 +476,35 @@ stv_face_delete <- function(face_id) {
   # Default model
   model <- model %||% "fal-ai/sadtalker"
 
-  # Call fal.api::fal_lipsync
-  result <- fal.api::fal_lipsync(
-    image = image,
-    audio = audio,
-    model = model,
-    .timeout = timeout
-  )
+  # Check if hunyuan-avatar model (uses different param names)
+  is_hunyuan <- grepl("hunyuan-avatar", model, fixed = TRUE)
+
+  if (is_hunyuan) {
+    # Hunyuan Avatar uses different parameter names
+    # Resolve local files to URLs
+    image_url <- .fal_resolve_file_or_url(image)
+    audio_url <- .fal_resolve_file_or_url(audio)
+
+    result <- fal.api::fal_generate(
+      model = model,
+      image_url = image_url,
+      audio_url = audio_url,
+      text = prompt,
+      num_frames = as.integer(num_frames),
+      num_inference_steps = as.integer(num_inference_steps),
+      turbo_mode = turbo_mode,
+      .timeout = timeout,
+      .verbose = TRUE
+    )
+  } else {
+    # SadTalker and other models use fal_lipsync
+    result <- fal.api::fal_lipsync(
+      image = image,
+      audio = audio,
+      model = model,
+      .timeout = timeout
+    )
+  }
 
   # Save video to output file
   if (!is.null(result$video$url)) {
@@ -420,5 +514,217 @@ stv_face_delete <- function(face_id) {
   }
 
   invisible(output)
+}
+
+#' Resolve file path or URL for fal.ai
+#' @keywords internal
+.fal_resolve_file_or_url <- function(path) {
+  # If already a URL, return as-is
+  if (grepl("^https?://", path)) {
+    return(path)
+  }
+
+  # Use fal.api's file resolver (uploads local files)
+  # Using ::: since fal.api is a cornyverse internal package
+  fal.api:::.fal_resolve_file(path)
+}
+
+#' Speech-to-video via WanGP API
+#'
+#' Internal function to generate video using the WanGP FastAPI server.
+#' Sends image and audio as multipart/form-data.
+#'
+#' @keywords internal
+.stv_wan2gp_api <- function(
+  image,
+  audio,
+  output = "stv_output.mp4",
+  prompt = "Person speaking naturally, clear speech, facing camera",
+  resolution = "720p",
+  quality = "balanced",
+  timeout = 600
+) {
+
+  base <- .wan2gp_api_get_base()
+  url <- paste0(base, "/avatar")
+
+  # Validate input files
+  if (!file.exists(image)) {
+    stop("Image file not found: ", image, call. = FALSE)
+  }
+  if (!file.exists(audio)) {
+    stop("Audio file not found: ", audio, call. = FALSE)
+  }
+
+  # Build multipart form
+  h <- curl::new_handle()
+  curl::handle_setopt(h,
+    timeout = timeout,
+    low_speed_time = 0,  # Disable low-speed timeout (quality mode is slow)
+    low_speed_limit = 0
+  )
+
+  curl::handle_setform(h,
+    image = curl::form_file(image),
+    audio = curl::form_file(audio),
+    prompt = prompt,
+    resolution = resolution,
+    quality = quality
+  )
+
+  message("Calling WanGP API (LTX-2) for avatar generation...")
+
+  response <- tryCatch(
+    curl::curl_fetch_memory(url, handle = h),
+    error = function(e) {
+      stop("Connection to WanGP API failed: ", e$message, call. = FALSE)
+    }
+  )
+
+  status <- response$status_code
+  if (status >= 400) {
+    err_content <- rawToChar(response$content)
+    err_msg <- tryCatch({
+      parsed <- jsonlite::fromJSON(err_content)
+      parsed$detail$message %||% parsed$detail %||% parsed$error %||% err_content
+    }, error = function(e) err_content)
+    stop("WanGP API error (", status, "): ", err_msg, call. = FALSE)
+  }
+
+  # Write video to output file
+  writeBin(response$content, output)
+  message("STV video saved to: ", output)
+
+  invisible(output)
+}
+
+#' Image-to-video via WanGP API (without audio)
+#'
+#' Internal function for i2v endpoint. Uses LTX-2 19B.
+#'
+#' @keywords internal
+.i2v_wan2gp_api <- function(
+  image,
+  output = "i2v_output.mp4",
+  prompt = "Camera slowly zooms in",
+  num_frames = 97L,
+  resolution = "720p",
+  quality = "balanced",
+  timeout = 600
+) {
+
+  base <- .wan2gp_api_get_base()
+  url <- paste0(base, "/i2v")
+
+  if (!file.exists(image)) {
+    stop("Image file not found: ", image, call. = FALSE)
+  }
+
+  h <- curl::new_handle()
+  curl::handle_setopt(h, timeout = timeout)
+
+  curl::handle_setform(h,
+    image = curl::form_file(image),
+    prompt = prompt,
+    num_frames = as.character(num_frames),
+    resolution = resolution,
+    quality = quality
+  )
+
+  message("Calling WanGP API (LTX-2) for i2v generation...")
+
+  response <- tryCatch(
+    curl::curl_fetch_memory(url, handle = h),
+    error = function(e) {
+      stop("Connection to WanGP API failed: ", e$message, call. = FALSE)
+    }
+  )
+
+  status <- response$status_code
+  if (status >= 400) {
+    err_content <- rawToChar(response$content)
+    err_msg <- tryCatch({
+      parsed <- jsonlite::fromJSON(err_content)
+      parsed$detail$message %||% parsed$detail %||% parsed$error %||% err_content
+    }, error = function(e) err_content)
+    stop("WanGP API error (", status, "): ", err_msg, call. = FALSE)
+  }
+
+  writeBin(response$content, output)
+  message("I2V video saved to: ", output)
+
+  invisible(output)
+}
+
+#' Text-to-video via WanGP API
+#'
+#' Internal function for t2v endpoint. Uses LTX-2 19B.
+#'
+#' @keywords internal
+.t2v_wan2gp_api <- function(
+  prompt,
+  output = "t2v_output.mp4",
+  num_frames = 97L,
+  resolution = "720p",
+  quality = "balanced",
+  timeout = 600
+) {
+
+  base <- .wan2gp_api_get_base()
+  url <- paste0(base, "/t2v")
+
+  h <- curl::new_handle()
+  curl::handle_setopt(h, timeout = timeout)
+
+  curl::handle_setform(h,
+    prompt = prompt,
+    num_frames = as.character(num_frames),
+    resolution = resolution,
+    quality = quality
+  )
+
+  message("Calling WanGP API (LTX-2) for t2v generation...")
+
+  response <- tryCatch(
+    curl::curl_fetch_memory(url, handle = h),
+    error = function(e) {
+      stop("Connection to WanGP API failed: ", e$message, call. = FALSE)
+    }
+  )
+
+  status <- response$status_code
+  if (status >= 400) {
+    err_content <- rawToChar(response$content)
+    err_msg <- tryCatch({
+      parsed <- jsonlite::fromJSON(err_content)
+      parsed$detail$message %||% parsed$detail %||% parsed$error %||% err_content
+    }, error = function(e) err_content)
+    stop("WanGP API error (", status, "): ", err_msg, call. = FALSE)
+  }
+
+  writeBin(response$content, output)
+  message("T2V video saved to: ", output)
+
+  invisible(output)
+}
+
+#' Check if WanGP API is available
+#'
+#' @return TRUE if the WanGP API is reachable, FALSE otherwise
+#' @export
+wan2gp_api_available <- function() {
+  base <- tryCatch(
+    .wan2gp_api_get_base(),
+    error = function(e) NULL
+  )
+  if (is.null(base)) return(FALSE)
+
+  url <- paste0(base, "/health")
+  tryCatch({
+    h <- curl::new_handle()
+    curl::handle_setopt(h, timeout = 5)
+    res <- curl::curl_fetch_memory(url, handle = h)
+    res$status_code == 200
+  }, error = function(e) FALSE)
 }
 
