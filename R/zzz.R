@@ -16,7 +16,9 @@
     # Image-to-video (diffusers_api with CogVideoX)
     xtx.itv_base = "http://localhost:8000",
     # Speech-to-video (faster-SadTalker-API)
-    xtx.stv_base = "http://localhost:10364"
+    xtx.stv_base = "http://localhost:10364",
+    # Background removal (rembg)
+    xtx.rembg_base = "http://localhost:7000"
   )
   toset <- !(names(op_xtx) %in% names(op))
   if (any(toset)) options(op_xtx[toset])
