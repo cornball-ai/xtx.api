@@ -4,12 +4,12 @@
 #'
 #' Configure the base URL for the rembg background removal service.
 #'
-#' @param url Base URL (e.g., "http://localhost:7000")
+#' @param url Base URL (e.g., "http://localhost:7824")
 #' @return Invisibly returns the previous value
 #' @examples
 #' \dontrun{
-#'   rembg_base("http://localhost:7000")
-#'   rembg_base("http://gpu-server:7000")
+#'   rembg_base("http://localhost:7824")
+#'   rembg_base("http://gpu-server:7824")
 #' }
 #' @export
 rembg_base <- function(url) {
@@ -28,7 +28,7 @@ rembg_base <- function(url) {
   if (is.null(base) || nchar(base) == 0) {
     stop(
       "Rembg API base URL not set. Use rembg_base() to configure it.\n",
-      "Example: rembg_base(\"http://localhost:7000\")",
+      "Example: rembg_base(\"http://localhost:7824\")",
       call. = FALSE
     )
   }
@@ -60,7 +60,7 @@ rembg_health <- function() {
 #' no greenscreen needed.
 #'
 #' The rembg service must be running. Start it with:
-#' \code{docker run -d --name rembg -p 7000:7000 danielgatis/rembg s --host 0.0.0.0 --port 7000}
+#' \code{docker run -d --name rembg -p 7824:7824 danielgatis/rembg s --host 0.0.0.0 --port 7824}
 #'
 #' @param image Character. Path to the input image file.
 #' @param file Character or NULL. Output path. If NULL, replaces the input file
@@ -72,7 +72,7 @@ rembg_health <- function() {
 #'
 #' @examples
 #' \dontrun{
-#' rembg_base("http://localhost:7000")
+#' rembg_base("http://localhost:7824")
 #'
 #' # Basic usage
 #' rembg("photo.png")  # saves to photo_rembg.png
