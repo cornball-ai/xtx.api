@@ -49,11 +49,15 @@
       download_models = TRUE
     )
 
+    # Use native text encoders on CUDA to avoid TorchScript device mismatch
+    use_native_te <- (unet_device == "cuda")
+
     pipeline <- diffuseR::load_pipeline(
       model_name = model_name,
       m2d = m2d,
       i2i = TRUE,
-      unet_dtype_str = unet_dtype
+      unet_dtype_str = unet_dtype,
+      use_native_text_encoder = use_native_te
     )
 
     .diffuser_cache[[cache_key]] <- list(
