@@ -76,6 +76,7 @@ xtx_img_edit <- function(
       image = image,
       prompt = prompt,
       model = model,
+      mask = mask,
       negative_prompt = negative_prompt,
       size = size,
       strength = strength,
@@ -150,12 +151,13 @@ xtx_img_edit <- function(
   result
 }
 
-#' Image edit via diffuseR img2img
+#' Image edit via diffuseR img2img or inpaint
 #' @keywords internal
 .xtx_img_edit_diffuser <- function(
   image,
   prompt,
   model = NULL,
+  mask = NULL,
   negative_prompt = NULL,
   size = "512x512",
   strength = 0.8,
@@ -198,8 +200,32 @@ xtx_img_edit <- function(
   # Get cached pipeline (reuses the same pipeline as tti)
   p <- .xtx_get_diffuser_pipeline(diffuser_model, devices)
 
-  # Call diffuseR::img2img with cached pipeline
-  torch::with_no_grad({
+  # Use inpaint when mask is provided, otherwise img2img
+  if (!is.null(mask)) {
+    if (!file.exists(mask)) {
+      stop("Mask file not found: ", mask, call. = FALSE)
+    }
+    torch::with_no_grad({
+      result <- diffuseR::inpaint(
+        input_image = image,
+        mask_image = mask,
+        prompt = prompt,
+        model_name = diffuser_model,
+        pipeline = p$pipeline,
+        devices = p$devices,
+        unet_dtype_str = p$unet_dtype,
+        negative_prompt = negative_prompt,
+        img_dim = img_dim,
+        num_inference_steps = as.integer(steps),
+        strength = strength,
+        guidance_scale = guidance_scale,
+        seed = seed,
+        save_file = save_file,
+        filename = filename
+      )
+    })
+  } else {
+    torch::with_no_grad({
       result <- diffuseR::img2img(
         input_image = image,
         prompt = prompt,
@@ -217,6 +243,7 @@ xtx_img_edit <- function(
         filename = filename
       )
     })
+  }
 
   # Normalize return structure
   list(
