@@ -3,26 +3,10 @@
 \alias{stv}
 \title{Generate Talking Head Video (Speech-to-Video)}
 \usage{
-stv(
-  image = NULL,
-  audio,
-  output = "stv_output.mp4",
-  backend = c("sadtalker", "wan2gp", "wan2gp_api", "fal"),
-  model = NULL,
-  face_id = NULL,
-  enhance = FALSE,
-  prompt = "Person speaking naturally",
-  resolution = "720p",
-  quality = "balanced",
-  width = 832L,
-  height = 832L,
-  num_frames = 129L,
-  num_inference_steps = 30L,
-  turbo_mode = TRUE,
-  seed = NULL,
-  device = "cuda",
-  timeout = 600
-)
+stv(image, audio, output, backend, "wan2gp", "wan2gp_api", "fal"), model,
+    face_id, enhance, prompt, resolution, quality, width, height, num_frames,
+    num_inference_steps, turbo_mode, seed, device, timeout,
+    sliding_window_size, sliding_window_overlap)
 }
 \arguments{
 \item{image}{Path to portrait image (PNG/JPG, front-facing) or base64 string}
@@ -62,6 +46,22 @@ or "ltx2" (general). For fal: "fal-ai/sadtalker" (default). Ignored for sadtalke
 \item{device}{Device to use: "cuda" or "cpu" (sadtalker only)}
 
 \item{timeout}{Request timeout in seconds (default: 600)}
+
+\item{sliding_window_size}{LTX-2 sliding-window size in frames
+(wan2gp_api only). Default 129 = ~5.4s at 24fps, LTX-2's native context.
+Must be 8n+1. `NULL` (default) defers to the server's configured default.}
+
+\item{sliding_window_overlap}{Frames reused as motion conditioning between
+adjacent sliding windows (wan2gp_api only). Higher = smoother joins, more
+frames generated overall. `NULL` (default) defers to the server.}
+
+\item{sliding_window_overlap_noise}{Noise injected into the overlap region,
+0-100 (wan2gp_api only). Lower = stricter continuity, can flicker if too
+strict. `NULL` (default) defers to the server.}
+
+\item{sliding_window_discard_last_frames}{Frames trimmed off the end of each
+window before joining (wan2gp_api only). `NULL` (default) defers to the
+server.}
 }
 \value{
 Invisibly returns the output file path
