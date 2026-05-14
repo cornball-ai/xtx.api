@@ -194,6 +194,18 @@ stv_available <- function(
 #' @param seed Random seed (wan2gp only)
 #' @param device Device to use: "cuda" or "cpu" (sadtalker only)
 #' @param timeout Request timeout in seconds (default: 600)
+#' @param sliding_window_size LTX-2 sliding-window size in frames
+#'   (wan2gp_api only). Default 129 = ~5.4s at 24fps, LTX-2's native context.
+#'   Must be 8n+1. `NULL` (default) defers to the server's configured default.
+#' @param sliding_window_overlap Frames reused as motion conditioning between
+#'   adjacent sliding windows (wan2gp_api only). Higher = smoother joins, more
+#'   frames generated overall. `NULL` (default) defers to the server.
+#' @param sliding_window_overlap_noise Noise injected into the overlap region,
+#'   0-100 (wan2gp_api only). Lower = stricter continuity, can flicker if too
+#'   strict. `NULL` (default) defers to the server.
+#' @param sliding_window_discard_last_frames Frames trimmed off the end of each
+#'   window before joining (wan2gp_api only). `NULL` (default) defers to the
+#'   server.
 #' @return Invisibly returns the output file path
 #' @examples
 #' \dontrun{
@@ -231,7 +243,11 @@ stv <- function(
   turbo_mode = TRUE,
   seed = NULL,
   device = "cuda",
-  timeout = 600
+  timeout = 600,
+  sliding_window_size = NULL,
+  sliding_window_overlap = NULL,
+  sliding_window_overlap_noise = NULL,
+  sliding_window_discard_last_frames = NULL
 ) {
 
   backend <- match.arg(backend)
@@ -249,7 +265,11 @@ stv <- function(
       prompt = prompt,
       resolution = resolution,
       quality = quality,
-      timeout = timeout
+      timeout = timeout,
+      sliding_window_size = sliding_window_size,
+      sliding_window_overlap = sliding_window_overlap,
+      sliding_window_overlap_noise = sliding_window_overlap_noise,
+      sliding_window_discard_last_frames = sliding_window_discard_last_frames
     )
   } else if (backend == "fal") {
     # fal.ai backend (SadTalker, Hunyuan Avatar, etc.)
@@ -542,7 +562,11 @@ stv_face_delete <- function(face_id) {
   prompt = "Person speaking naturally, clear speech, facing camera",
   resolution = "720p",
   quality = "balanced",
-  timeout = 600
+  timeout = 600,
+  sliding_window_size = NULL,
+  sliding_window_overlap = NULL,
+  sliding_window_overlap_noise = NULL,
+  sliding_window_discard_last_frames = NULL
 ) {
 
   base <- .wan2gp_api_get_base()
@@ -564,13 +588,28 @@ stv_face_delete <- function(face_id) {
     low_speed_limit = 0
   )
 
-  curl::handle_setform(h,
+  form_args <- list(
     image = curl::form_file(image),
     audio = curl::form_file(audio),
     prompt = prompt,
     resolution = resolution,
     quality = quality
   )
+  # Forward sliding-window overrides only when provided; otherwise the server
+  # picks its own DEFAULT_SLIDING_WINDOW_* values.
+  if (!is.null(sliding_window_size)) {
+    form_args$sliding_window_size <- as.character(sliding_window_size)
+  }
+  if (!is.null(sliding_window_overlap)) {
+    form_args$sliding_window_overlap <- as.character(sliding_window_overlap)
+  }
+  if (!is.null(sliding_window_overlap_noise)) {
+    form_args$sliding_window_overlap_noise <- as.character(sliding_window_overlap_noise)
+  }
+  if (!is.null(sliding_window_discard_last_frames)) {
+    form_args$sliding_window_discard_last_frames <- as.character(sliding_window_discard_last_frames)
+  }
+  do.call(curl::handle_setform, c(list(h), form_args))
 
   message("Calling WanGP API (LTX-2) for avatar generation...")
 
