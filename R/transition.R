@@ -55,7 +55,11 @@
 #' @return Invisibly, the path to the written MP4. Note the clip has
 #'   \code{num_frames + conditioning_frames - 1} frames, not \code{num_frames}:
 #'   the server's \code{video_source} continuation prepends the conditioning tail
-#'   of \code{start_clip} as continuity context (e.g. 49 + 9 -> 57 frames).
+#'   of \code{start_clip} as continuity context (e.g. 49 + 9 -> 57 frames). When
+#'   assembling \code{start_clip + bridge + clipB}, drop the bridge's first
+#'   \code{conditioning_frames} (a copy of \code{start_clip}'s tail) or trim
+#'   \code{start_clip}'s tail, so the join isn't double-played; the bridge ->
+#'   clipB join is seamless when clipB starts on \code{end_image}.
 #' @examples
 #' \dontrun{
 #'   wan2gp_api_base("http://localhost:8000")
