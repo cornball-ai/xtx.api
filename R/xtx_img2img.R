@@ -43,192 +43,151 @@
 #' }
 #'
 #' @export
-xtx_img_edit <- function(
-  image,
-  prompt,
-  backend = c("openai", "diffuser"),
-  model = NULL,
-  mask = NULL,
-  negative_prompt = NULL,
-  size = "1024x1024",
-  strength = 0.8,
-  steps = 50,
-  guidance_scale = 7.5,
-  seed = NULL,
-  devices = "cpu",
-  n = 1,
-  response_format = "url",
-  file = NULL
-) {
+xtx_img_edit <- function(image, prompt, backend = c("openai", "diffuser"),
+                         model = NULL, mask = NULL, negative_prompt = NULL,
+                         size = "1024x1024", strength = 0.8, steps = 50,
+                         guidance_scale = 7.5, seed = NULL, devices = "cpu",
+                         n = 1, response_format = "url", file = NULL) {
+    # Validate inputs
+    if (!file.exists(image)) {
+        stop("Image file not found: ", image, call. = FALSE)
+    }
+    if (!is.character(prompt) || length(prompt) != 1 || nchar(prompt) == 0) {
+        stop("'prompt' must be a non-empty character string", call. = FALSE)
+    }
 
-  # Validate inputs
-  if (!file.exists(image)) {
-    stop("Image file not found: ", image, call. = FALSE)
-  }
-  if (!is.character(prompt) || length(prompt) != 1 || nchar(prompt) == 0) {
-    stop("'prompt' must be a non-empty character string", call. = FALSE)
-  }
+    backend <- match.arg(backend)
 
-  backend <- match.arg(backend)
-
-  if (backend == "diffuser") {
-    .xtx_img_edit_diffuser(
-      image = image,
-      prompt = prompt,
-      model = model,
-      negative_prompt = negative_prompt,
-      size = size,
-      strength = strength,
-      steps = steps,
-      guidance_scale = guidance_scale,
-      seed = seed,
-      devices = devices,
-      file = file
-    )
-  } else {
-    .xtx_img_edit_openai(
-      image = image,
-      prompt = prompt,
-      model = model,
-      mask = mask,
-      size = size,
-      n = n,
-      response_format = response_format,
-      file = file
-    )
-  }
+    if (backend == "diffuser") {
+        .xtx_img_edit_diffuser(image = image, prompt = prompt, model = model,
+                               negative_prompt = negative_prompt, size = size,
+                               strength = strength, steps = steps,
+                               guidance_scale = guidance_scale, seed = seed,
+                               devices = devices, file = file)
+    } else {
+        .xtx_img_edit_openai(
+                             image = image,
+                             prompt = prompt,
+                             model = model,
+                             mask = mask,
+                             size = size,
+                             n = n,
+                             response_format = response_format,
+                             file = file
+        )
+    }
 }
 
 #' Image edit via OpenAI DALL-E
 #' @keywords internal
-.xtx_img_edit_openai <- function(
-  image,
-  prompt,
-  model = NULL,
-  mask = NULL,
-  size = "1024x1024",
-  n = 1,
-  response_format = "url",
-  file = NULL
-) {
+.xtx_img_edit_openai <- function(image, prompt, model = NULL, mask = NULL,
+                                 size = "1024x1024", n = 1,
+                                 response_format = "url", file = NULL) {
+    if (!is.null(mask) && !file.exists(mask)) {
+        stop("Mask file not found: ", mask, call. = FALSE)
+    }
 
-  if (!is.null(mask) && !file.exists(mask)) {
-    stop("Mask file not found: ", mask, call. = FALSE)
-  }
+    model <- model %||% "dall-e-2"
 
-  model <- model %||% "dall-e-2"
+    # Validate size
+    valid_sizes <- c("256x256", "512x512", "1024x1024")
+    if (!size %in% valid_sizes) {
+        stop("size must be one of: ", paste(valid_sizes, collapse = ", "),
+             call. = FALSE)
+    }
 
-  # Validate size
-  valid_sizes <- c("256x256", "512x512", "1024x1024")
-  if (!size %in% valid_sizes) {
-    stop("size must be one of: ", paste(valid_sizes, collapse = ", "), call. = FALSE)
-  }
+    # Build form data
+    form_data <- list(
+                      image = curl::form_file(image, type = "image/png"),
+                      prompt = prompt,
+                      model = model,
+                      n = as.character(as.integer(n)),
+                      size = size,
+                      response_format = response_format
+    )
 
-  # Build form data
-  form_data <- list(
-    image = curl::form_file(image, type = "image/png"),
-    prompt = prompt,
-    model = model,
-    n = as.character(as.integer(n)),
-    size = size,
-    response_format = response_format
-  )
+    if (!is.null(mask)) {
+        form_data$mask <- curl::form_file(mask, type = "image/png")
+    }
 
-  if (!is.null(mask)) {
-    form_data$mask <- curl::form_file(mask, type = "image/png")
-  }
+    # Make request
+    result <- .xtx_post_multipart("/v1/images/edits", form_data)
+    result$backend <- "openai"
 
-  # Make request
-  result <- .xtx_post_multipart("/v1/images/edits", form_data)
-  result$backend <- "openai"
+    # Save to file if requested
+    if (!is.null(file) && length(result$data) > 0) {
+        .xtx_save_image(result$data[[1]], file, response_format)
+    }
 
-  # Save to file if requested
-  if (!is.null(file) && length(result$data) > 0) {
-    .xtx_save_image(result$data[[1]], file, response_format)
-  }
-
-  result
+    result
 }
 
 #' Image edit via diffuseR img2img
 #' @keywords internal
-.xtx_img_edit_diffuser <- function(
-  image,
-  prompt,
-  model = NULL,
-  negative_prompt = NULL,
-  size = "512x512",
-  strength = 0.8,
-  steps = 50,
-  guidance_scale = 7.5,
-  seed = NULL,
-  devices = "cpu",
-  file = NULL
-) {
+.xtx_img_edit_diffuser <- function(image, prompt, model = NULL,
+                                   negative_prompt = NULL, size = "512x512",
+                                   strength = 0.8, steps = 50,
+                                   guidance_scale = 7.5, seed = NULL,
+                                   devices = "cpu", file = NULL) {
+    if (!.xtx_has_diffuser()) {
+        stop(
+             "diffuseR package is not installed.\n",
+             "Install from local source or GitHub to use local diffusion models.",
+             call. = FALSE
+        )
+    }
 
-  if (!.xtx_has_diffuser()) {
-    stop(
-      "diffuseR package is not installed.\n",
-      "Install from local source or GitHub to use local diffusion models.",
-      call. = FALSE
+    # Default model - use sdxl to match tti default
+    model <- model %||% "sdxl"
+
+    # Map model names
+    diffuser_model <- switch(
+                             model,
+                             "sd21" = "sd21",
+                             "sd2.1" = "sd21",
+                             "sdxl" = "sdxl",
+                             "sd-xl" = "sdxl",
+                             stop("Unsupported diffuseR model: ", model,
+                                  ". Use 'sd21' or 'sdxl'.", call. = FALSE)
     )
-  }
 
-  # Default model - use sdxl to match tti default
-  model <- model %||% "sdxl"
+    # Parse size
+    dims <- as.integer(strsplit(size, "x")[[1]])
+    img_dim <- dims[1]
 
-  # Map model names
-  diffuser_model <- switch(
-    model,
-    "sd21" = "sd21",
-    "sd2.1" = "sd21",
-    "sdxl" = "sdxl",
-    "sd-xl" = "sdxl",
-    stop("Unsupported diffuseR model: ", model, ". Use 'sd21' or 'sdxl'.", call. = FALSE)
-  )
+    # Determine save behavior
+    save_file <- !is.null(file)
+    filename <- file
 
-  # Parse size
-  dims <- as.integer(strsplit(size, "x") [[1]])
-  img_dim <- dims[1]
+    # Get cached pipeline (reuses the same pipeline as tti)
+    p <- .xtx_get_diffuser_pipeline(diffuser_model, devices)
 
-  # Determine save behavior
-  save_file <- !is.null(file)
-  filename <- file
-
-  # Get cached pipeline (reuses the same pipeline as tti)
-  p <- .xtx_get_diffuser_pipeline(diffuser_model, devices)
-
-  # Call diffuseR::img2img with cached pipeline
-  torch::with_no_grad({
-      result <- diffuseR::img2img(
-        input_image = image,
-        prompt = prompt,
-        model_name = diffuser_model,
-        pipeline = p$pipeline,
-        devices = p$devices,
-        unet_dtype_str = p$unet_dtype,
-        negative_prompt = negative_prompt,
-        img_dim = img_dim,
-        num_inference_steps = as.integer(steps),
-        strength = strength,
-        guidance_scale = guidance_scale,
-        seed = seed,
-        save_file = save_file,
-        filename = filename
-      )
+    # Call diffuseR::img2img with cached pipeline
+    torch::with_no_grad({
+        result <- diffuseR::img2img(
+                                    input_image = image,
+                                    prompt = prompt,
+                                    model_name = diffuser_model,
+                                    pipeline = p$pipeline,
+                                    devices = p$devices,
+                                    unet_dtype_str = p$unet_dtype,
+                                    negative_prompt = negative_prompt,
+                                    img_dim = img_dim,
+                                    num_inference_steps = as.integer(steps),
+                                    strength = strength,
+                                    guidance_scale = guidance_scale,
+                                    seed = seed,
+                                    save_file = save_file,
+                                    filename = filename
+        )
     })
 
-  # Normalize return structure
-  list(
-    data = list(
-      list(
-        image = result$image,
-        revised_prompt = NULL
-      )
-    ),
-    metadata = result$metadata,
-    backend = "diffuser"
-  )
+    # Normalize return structure
+    list(
+         data = list(list(image = result$image, revised_prompt = NULL)),
+         metadata = result$metadata,
+         backend = "diffuser"
+    )
 }
 
 #' Create Image Variations
@@ -252,43 +211,37 @@ xtx_img_edit <- function(
 #' }
 #'
 #' @export
-xtx_img_variation <- function(
-  image,
-  model = "dall-e-2",
-  size = "1024x1024",
-  n = 1,
-  response_format = "url",
-  file = NULL
-) {
+xtx_img_variation <- function(image, model = "dall-e-2", size = "1024x1024",
+                              n = 1, response_format = "url", file = NULL) {
+    if (!file.exists(image)) {
+        stop("Image file not found: ", image, call. = FALSE)
+    }
 
-  if (!file.exists(image)) {
-    stop("Image file not found: ", image, call. = FALSE)
-  }
+    # Validate size
+    valid_sizes <- c("256x256", "512x512", "1024x1024")
+    if (!size %in% valid_sizes) {
+        stop("size must be one of: ", paste(valid_sizes, collapse = ", "),
+             call. = FALSE)
+    }
 
-  # Validate size
-  valid_sizes <- c("256x256", "512x512", "1024x1024")
-  if (!size %in% valid_sizes) {
-    stop("size must be one of: ", paste(valid_sizes, collapse = ", "), call. = FALSE)
-  }
+    # Build form data
+    form_data <- list(
+                      image = curl::form_file(image, type = "image/png"),
+                      model = model,
+                      n = as.character(as.integer(n)),
+                      size = size,
+                      response_format = response_format
+    )
 
-  # Build form data
-  form_data <- list(
-    image = curl::form_file(image, type = "image/png"),
-    model = model,
-    n = as.character(as.integer(n)),
-    size = size,
-    response_format = response_format
-  )
+    # Make request
+    result <- .xtx_post_multipart("/v1/images/variations", form_data)
+    result$backend <- "openai"
 
-  # Make request
-  result <- .xtx_post_multipart("/v1/images/variations", form_data)
-  result$backend <- "openai"
+    # Save to file if requested
+    if (!is.null(file) && length(result$data) > 0) {
+        .xtx_save_image(result$data[[1]], file, response_format)
+    }
 
-  # Save to file if requested
-  if (!is.null(file) && length(result$data) > 0) {
-    .xtx_save_image(result$data[[1]], file, response_format)
-  }
-
-  result
+    result
 }
 
