@@ -41,9 +41,13 @@
 #' @param audio Optional path to an audio file. Requires a checkpoint with the
 #'   AV connector; unavailable on GGUF-light.
 #' @param num_frames Frames to generate; must be 8n+1 (LTX-2 constraint).
-#'   \code{NULL} (default) defers to the server default (49, ~2s @ 24fps).
+#'   \code{NULL} (default) falls back to \code{getOption("xtx.transition.num_frames")}
+#'   and, if that is unset, to the server's canonical default.
 #' @param conditioning_frames Trailing frames of \code{start_clip} used as motion
-#'   conditioning. \code{NULL} (default) defers to the server default (9).
+#'   conditioning. \code{NULL} (default) falls back to
+#'   \code{getOption("xtx.transition.conditioning_frames")} and, if unset, to the
+#'   server default. Set per-box prefs in \code{~/.Rprofile}, e.g.
+#'   \code{options(xtx.transition.num_frames = 49, xtx.transition.conditioning_frames = 9)}.
 #' @param resolution \code{"480p"} or \code{"720p"} (default \code{"720p"}).
 #' @param quality \code{"fast"}, \code{"balanced"}, or \code{"quality"}
 #'   (default \code{"balanced"}).
@@ -128,6 +132,12 @@ transition <- function(
   output = "transition_output.mp4",
   timeout = 1800
 ) {
+
+  # Per-box prefs live client-side (xtx.* option namespace), not in the repo's
+  # canonical server defaults: explicit arg > ~/.Rprofile option > server default.
+  num_frames <- num_frames %||% getOption("xtx.transition.num_frames")
+  conditioning_frames <- conditioning_frames %||%
+    getOption("xtx.transition.conditioning_frames")
 
   base <- .wan2gp_api_get_base()
   url <- paste0(base, "/transition")
