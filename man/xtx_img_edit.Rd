@@ -3,23 +3,10 @@
 \alias{xtx_img_edit}
 \title{Edit Image with Text Prompt}
 \usage{
-xtx_img_edit(
-  image,
-  prompt,
-  backend = c("openai", "diffuser"),
-  model = NULL,
-  mask = NULL,
-  negative_prompt = NULL,
-  size = "1024x1024",
-  strength = 0.8,
-  steps = 50,
-  guidance_scale = 7.5,
-  seed = NULL,
-  devices = "cpu",
-  n = 1,
-  response_format = "url",
-  file = NULL
-)
+xtx_img_edit(image, prompt, backend = c("openai", "diffuser"), model = NULL,
+             mask = NULL, negative_prompt = NULL, size = "1024x1024",
+             strength = 0.8, steps = 50, guidance_scale = 7.5, seed = NULL,
+             devices = "cpu", n = 1, response_format = "url", file = NULL)
 }
 \arguments{
 \item{image}{Character. Path to the input image file.}

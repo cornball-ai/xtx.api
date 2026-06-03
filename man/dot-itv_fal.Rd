@@ -3,13 +3,8 @@
 \alias{.itv_fal}
 \title{Image-to-video via fal.ai}
 \usage{
-.itv_fal(
-  image,
-  prompt = "",
-  output = "itv_output.mp4",
-  model = NULL,
-  timeout = 600
-)
+.itv_fal(image, prompt = "", output = "itv_output.mp4", model = NULL,
+         timeout = 600)
 }
 \description{
 Image-to-video via fal.ai

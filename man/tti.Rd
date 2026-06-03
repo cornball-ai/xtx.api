@@ -3,25 +3,11 @@
 \alias{tti}
 \title{Generate Image from Text}
 \usage{
-tti(
-  prompt,
-  backend = c("openai", "diffuseR", "diffusers_api", "fal", "auto"),
-  model = NULL,
-  negative_prompt = NULL,
-  size = NULL,
-  quality = "standard",
-  style = "vivid",
-  n = 1,
-  steps = 50,
-  guidance_scale = 7.5,
-  seed = NULL,
-  lora = NULL,
-  lora_scale = 0.8,
-  devices = "cpu",
-  response_format = "url",
-  file = NULL,
-  timeout = 120
-)
+tti(prompt, backend = c("openai", "diffuseR", "diffusers_api", "fal", "auto"),
+    model = NULL, negative_prompt = NULL, size = NULL, quality = "standard",
+    style = "vivid", n = 1, steps = 50, guidance_scale = 7.5, seed = NULL,
+    lora = NULL, lora_scale = 0.8, devices = "cpu", response_format = "url",
+    file = NULL, timeout = 120)
 }
 \arguments{
 \item{prompt}{Character. The text description of the image to generate.}

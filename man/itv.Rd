@@ -3,22 +3,11 @@
 \alias{itv}
 \title{Generate Video from Image (Image-to-Video)}
 \usage{
-itv(
-  image,
-  prompt = "",
-  output = "itv_output.mp4",
-  backend = c("cogvideo", "wan2gp_api", "wan2gp", "fal"),
-  model = NULL,
-  num_frames = NULL,
-  num_steps = NULL,
-  width = 832L,
-  height = 832L,
-  resolution = "720p",
-  quality = "balanced",
-  guidance_scale = NULL,
-  seed = NULL,
-  timeout = 900
-)
+itv(image, prompt = "", output = "itv_output.mp4",
+    backend = c("cogvideo", "wan2gp_api", "wan2gp", "fal"), model = NULL,
+    num_frames = NULL, num_steps = NULL, width = 832L, height = 832L,
+    resolution = "720p", quality = "balanced", guidance_scale = NULL,
+    seed = NULL, timeout = 900)
 }
 \arguments{
 \item{image}{Path to starting frame image (PNG/JPG) or base64 string}

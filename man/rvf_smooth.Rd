@@ -3,13 +3,8 @@
 \alias{rvf_smooth}
 \title{Smooth Video with Frame Interpolation}
 \usage{
-rvf_smooth(
-  input,
-  output = "smooth.mp4",
-  factor = 2L,
-  model = "rife-v4.6",
-  gpu = 0L
-)
+rvf_smooth(input, output = "smooth.mp4", factor = 2L, model = "rife-v4.6",
+           gpu = 0L)
 }
 \arguments{
 \item{input}{Path to input video file}

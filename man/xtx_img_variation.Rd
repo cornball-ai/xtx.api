@@ -3,14 +3,8 @@
 \alias{xtx_img_variation}
 \title{Create Image Variations}
 \usage{
-xtx_img_variation(
-  image,
-  model = "dall-e-2",
-  size = "1024x1024",
-  n = 1,
-  response_format = "url",
-  file = NULL
-)
+xtx_img_variation(image, model = "dall-e-2", size = "1024x1024", n = 1,
+                  response_format = "url", file = NULL)
 }
 \arguments{
 \item{image}{Character. Path to the input image file (PNG, max 4MB, square).}
