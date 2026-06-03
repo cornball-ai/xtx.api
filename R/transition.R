@@ -38,6 +38,8 @@
 #' @param keyframe_positions Optional integer vector of 1-indexed frame
 #'   positions, one per \code{keyframe_images}, each within \code{1:num_frames}.
 #' @param prompt Optional scene/motion description. Keep it stable across a chain.
+#'   When unset, a generic transition prompt is sent (the backend requires a
+#'   non-empty prompt).
 #' @param audio Optional path to an audio file. Requires a checkpoint with the
 #'   AV connector; unavailable on GGUF-light.
 #' @param num_frames Frames to generate; must be 8n+1 (LTX-2 constraint).
@@ -80,164 +82,144 @@
 #'              num_frames = 49, output = "bridge.mp4")
 #' }
 #' @export
-transition <- function(
-  start_clip,
-  end_image = NULL,
-  keyframe_images = NULL,
-  keyframe_positions = NULL,
-  prompt = NULL,
-  audio = NULL,
-  num_frames = NULL,
-  conditioning_frames = NULL,
-  resolution = "720p",
-  quality = "balanced",
-  seed = NULL,
-  output = "transition_output.mp4",
-  timeout = 1800,
-  backend = c("wan2gp_api")
-) {
-  backend <- match.arg(backend)
+transition <- function(start_clip, end_image = NULL, keyframe_images = NULL,
+                       keyframe_positions = NULL, prompt = NULL,
+                       audio = NULL, num_frames = NULL,
+                       conditioning_frames = NULL, resolution = "720p",
+                       quality = "balanced", seed = NULL,
+                       output = "transition_output.mp4", timeout = 1800,
+                       backend = c("wan2gp_api")) {
+    backend <- match.arg(backend)
 
-  .transition_wan2gp_api(
-    start_clip = start_clip,
-    end_image = end_image,
-    keyframe_images = keyframe_images,
-    keyframe_positions = keyframe_positions,
-    prompt = prompt,
-    audio = audio,
-    num_frames = num_frames,
-    conditioning_frames = conditioning_frames,
-    resolution = resolution,
-    quality = quality,
-    seed = seed,
-    output = output,
-    timeout = timeout
-  )
+    .transition_wan2gp_api(start_clip = start_clip, end_image = end_image,
+                           keyframe_images = keyframe_images,
+                           keyframe_positions = keyframe_positions,
+                           prompt = prompt, audio = audio,
+                           num_frames = num_frames,
+                           conditioning_frames = conditioning_frames,
+                           resolution = resolution, quality = quality,
+                           seed = seed, output = output, timeout = timeout)
 }
 
 #' WanGP API Transition Backend
 #' @keywords internal
-.transition_wan2gp_api <- function(
-  start_clip,
-  end_image = NULL,
-  keyframe_images = NULL,
-  keyframe_positions = NULL,
-  prompt = NULL,
-  audio = NULL,
-  num_frames = NULL,
-  conditioning_frames = NULL,
-  resolution = "720p",
-  quality = "balanced",
-  seed = NULL,
-  output = "transition_output.mp4",
-  timeout = 1800
-) {
-
-  # Per-box prefs live client-side (xtx.* option namespace), not in the repo's
-  # canonical server defaults: explicit arg > ~/.Rprofile option > server default.
-  num_frames <- num_frames %||% getOption("xtx.transition.num_frames")
-  conditioning_frames <- conditioning_frames %||%
+.transition_wan2gp_api <- function(start_clip, end_image = NULL,
+                                   keyframe_images = NULL,
+                                   keyframe_positions = NULL, prompt = NULL,
+                                   audio = NULL, num_frames = NULL,
+                                   conditioning_frames = NULL,
+                                   resolution = "720p", quality = "balanced",
+                                   seed = NULL,
+                                   output = "transition_output.mp4",
+                                   timeout = 1800) {
+    # Per-box prefs live client-side (xtx.* option namespace), not in the repo's
+    # canonical server defaults: explicit arg > ~/.Rprofile option > server default.
+    num_frames <- num_frames %||% getOption("xtx.transition.num_frames")
+    conditioning_frames <- conditioning_frames %||%
     getOption("xtx.transition.conditioning_frames")
 
-  base <- .wan2gp_api_get_base()
-  url <- paste0(base, "/transition")
+    base <- .wan2gp_api_get_base()
+    url <- paste0(base, "/transition")
 
-  # Validate input files up front (clear R error before hitting the network).
-  if (!file.exists(start_clip)) {
-    stop("start_clip file not found: ", start_clip, call. = FALSE)
-  }
-  if (!is.null(end_image) && !file.exists(end_image)) {
-    stop("end_image file not found: ", end_image, call. = FALSE)
-  }
-  if (!is.null(audio) && !file.exists(audio)) {
-    stop("audio file not found: ", audio, call. = FALSE)
-  }
-
-  # Keyframes: images and positions must line up; check files exist.
-  n_kf <- length(keyframe_images)
-  if (n_kf != length(keyframe_positions)) {
-    stop("keyframe_images (", n_kf, ") and keyframe_positions (",
-      length(keyframe_positions), ") must have the same length.", call. = FALSE)
-  }
-  for (img in keyframe_images) {
-    if (!file.exists(img)) {
-      stop("keyframe image not found: ", img, call. = FALSE)
+    # Validate input files up front (clear R error before hitting the network).
+    if (!file.exists(start_clip)) {
+        stop("start_clip file not found: ", start_clip, call. = FALSE)
     }
-  }
+    if (!is.null(end_image) && !file.exists(end_image)) {
+        stop("end_image file not found: ", end_image, call. = FALSE)
+    }
+    if (!is.null(audio) && !file.exists(audio)) {
+        stop("audio file not found: ", audio, call. = FALSE)
+    }
 
-  # LTX-2 requires frames = 8n+1. Catch it here when the caller set num_frames;
-  # otherwise the server picks its (already-valid) default.
-  if (!is.null(num_frames) && num_frames %% 8 != 1) {
-    stop("num_frames must be 8n+1 (9, 17, 25, ..., 49, ...), got ", num_frames,
-      call. = FALSE)
-  }
-
-  # Build multipart form
-  h <- curl::new_handle()
-  curl::handle_setopt(h,
-    timeout = timeout,
-    low_speed_time = 0,  # Disable low-speed timeout (generation is slow)
-    low_speed_limit = 0
-  )
-
-  form_args <- list(
-    start_clip = curl::form_file(start_clip),
-    prompt = prompt %||% "",
-    resolution = resolution,
-    quality = quality
-  )
-  # Optional files / params: send only when provided so the server applies its
-  # own defaults otherwise.
-  if (!is.null(end_image)) {
-    form_args$end_image <- curl::form_file(end_image)
-  }
-  # Interior keyframe anchors: one repeated `keyframe_images` file field per
-  # image (matches FastAPI list[UploadFile]) plus a comma-separated positions
-  # string. Duplicate list names are passed through to curl as repeated parts.
-  if (n_kf > 0) {
+    # Keyframes: images and positions must line up; check files exist.
+    n_kf <- length(keyframe_images)
+    if (n_kf != length(keyframe_positions)) {
+        stop("keyframe_images (", n_kf, ") and keyframe_positions (",
+             length(keyframe_positions), ") must have the same length.",
+             call. = FALSE)
+    }
     for (img in keyframe_images) {
-      form_args <- c(form_args, stats::setNames(list(curl::form_file(img)), "keyframe_images"))
+        if (!file.exists(img)) {
+            stop("keyframe image not found: ", img, call. = FALSE)
+        }
     }
-    form_args$keyframe_positions <- paste(keyframe_positions, collapse = ",")
-  }
-  if (!is.null(audio)) {
-    form_args$audio <- curl::form_file(audio)
-  }
-  if (!is.null(num_frames)) {
-    form_args$num_frames <- as.character(num_frames)
-  }
-  if (!is.null(conditioning_frames)) {
-    form_args$conditioning_frames <- as.character(conditioning_frames)
-  }
-  if (!is.null(seed)) {
-    form_args$seed <- as.character(seed)
-  }
-  do.call(curl::handle_setform, c(list(h), form_args))
 
-  message("Calling WanGP API (LTX-2) for transition generation...")
-
-  response <- tryCatch(
-    curl::curl_fetch_memory(url, handle = h),
-    error = function(e) {
-      stop("Connection to WanGP API failed: ", e$message, call. = FALSE)
+    # LTX-2 requires frames = 8n+1. Catch it here when the caller set num_frames;
+    # otherwise the server picks its (already-valid) default.
+    if (!is.null(num_frames) && num_frames %% 8 != 1) {
+        stop("num_frames must be 8n+1 (9, 17, 25, ..., 49, ...), got ", num_frames,
+             call. = FALSE)
     }
-  )
 
-  status <- response$status_code
-  if (status >= 400) {
-    err_content <- rawToChar(response$content)
-    err_msg <- tryCatch({
-      parsed <- jsonlite::fromJSON(err_content)
-      parsed$detail$message %||% parsed$detail %||% parsed$error %||% err_content
-    }, error = function(e) err_content)
-    stop("WanGP API error (", status, "): ", err_msg, call. = FALSE)
-  }
+    # Build multipart form
+    h <- curl::new_handle()
+    curl::handle_setopt(h,
+                        timeout = timeout,
+                        low_speed_time = 0, # Disable low-speed timeout (generation is slow)
+                        low_speed_limit = 0
+    )
 
-  # Write video to output file
-  writeBin(response$content, output)
-  message("Transition video saved to: ", output)
+    # wgp.py rejects an empty prompt (the task is skipped, surfacing as a 500), so
+    # fall back to a generic transition prompt when the caller gives none.
+    form_args <- list(
+                      start_clip = curl::form_file(start_clip),
+                      prompt = prompt %||% "smooth cinematic transition",
+                      resolution = resolution,
+                      quality = quality
+    )
+    # Optional files / params: send only when provided so the server applies its
+    # own defaults otherwise.
+    if (!is.null(end_image)) {
+        form_args$end_image <- curl::form_file(end_image)
+    }
+    # Interior keyframe anchors: one repeated `keyframe_images` file field per
+    # image (matches FastAPI list[UploadFile]) plus a comma-separated positions
+    # string. Duplicate list names are passed through to curl as repeated parts.
+    if (n_kf > 0) {
+        for (img in keyframe_images) {
+            form_args <- c(form_args, stats::setNames(list(curl::form_file(img)), "keyframe_images"))
+        }
+        form_args$keyframe_positions <- paste(keyframe_positions, collapse = ",")
+    }
+    if (!is.null(audio)) {
+        form_args$audio <- curl::form_file(audio)
+    }
+    if (!is.null(num_frames)) {
+        form_args$num_frames <- as.character(num_frames)
+    }
+    if (!is.null(conditioning_frames)) {
+        form_args$conditioning_frames <- as.character(conditioning_frames)
+    }
+    if (!is.null(seed)) {
+        form_args$seed <- as.character(seed)
+    }
+    do.call(curl::handle_setform, c(list(h), form_args))
 
-  invisible(output)
+    message("Calling WanGP API (LTX-2) for transition generation...")
+
+    response <- tryCatch(
+                         curl::curl_fetch_memory(url, handle = h),
+                         error = function(e) {
+        stop("Connection to WanGP API failed: ", e$message, call. = FALSE)
+    }
+    )
+
+    status <- response$status_code
+    if (status >= 400) {
+        err_content <- rawToChar(response$content)
+        err_msg <- tryCatch({
+            parsed <- jsonlite::fromJSON(err_content)
+            parsed$detail$message %||% parsed$detail %||% parsed$error %||% err_content
+        }, error = function(e) err_content)
+        stop("WanGP API error (", status, "): ", err_msg, call. = FALSE)
+    }
+
+    # Write video to output file
+    writeBin(response$content, output)
+    message("Transition video saved to: ", output)
+
+    invisible(output)
 }
 
 #' Check if the WanGP Transition Endpoint is Reachable
@@ -254,16 +236,17 @@ transition <- function(
 #' }
 #' @export
 transition_available <- function(timeout = 2) {
-  base <- tryCatch(.wan2gp_api_get_base(), error = function(e) NULL)
-  if (is.null(base)) {
-    return(FALSE)
-  }
-  url <- paste0(base, "/health")
+    base <- tryCatch(.wan2gp_api_get_base(), error = function(e) NULL)
+    if (is.null(base)) {
+        return(FALSE)
+    }
+    url <- paste0(base, "/health")
 
-  tryCatch({
-      h <- curl::new_handle()
-      curl::handle_setopt(h, timeout = timeout)
-      res <- curl::curl_fetch_memory(url, handle = h)
-      res$status_code == 200
+    tryCatch({
+        h <- curl::new_handle()
+        curl::handle_setopt(h, timeout = timeout)
+        res <- curl::curl_fetch_memory(url, handle = h)
+        res$status_code == 200
     }, error = function(e) FALSE)
 }
+
