@@ -24,20 +24,13 @@
 #' }
 #'
 #' @export
-rvf_morph <- function(
-  start,
-  end,
-  output = "morph.mp4",
-  frames = 60L,
-  duration = NULL,
-  fps = 30,
-  model = "rife-v4.6",
-  gpu = 0L
-) {
-  .check_rife()
-  rife::rife_morph(start, end, output,
-    frames = frames, duration = duration, fps = fps,
-    model = model, gpu = gpu)
+rvf_morph <- function(start, end, output = "morph.mp4", frames = 60L,
+                      duration = NULL, fps = 30, model = "rife-v4.6",
+                      gpu = 0L) {
+    .check_rife()
+    rife::rife_morph(start, end, output, frames = frames,
+                     duration = duration, fps = fps, model = model,
+                     gpu = gpu)
 }
 
 #' Smooth Video with Frame Interpolation
@@ -63,15 +56,10 @@ rvf_morph <- function(
 #' }
 #'
 #' @export
-rvf_smooth <- function(
-  input,
-  output = "smooth.mp4",
-  factor = 2L,
-  model = "rife-v4.6",
-  gpu = 0L
-) {
-  .check_rife()
-  rife::rife_video(input, output, factor = factor, model = model, gpu = gpu)
+rvf_smooth <- function(input, output = "smooth.mp4", factor = 2L,
+                       model = "rife-v4.6", gpu = 0L) {
+    .check_rife()
+    rife::rife_video(input, output, factor = factor, model = model, gpu = gpu)
 }
 
 #' Interpolate Between Two Images
@@ -98,17 +86,11 @@ rvf_smooth <- function(
 #' }
 #'
 #' @export
-rvf_interp <- function(
-  img0,
-  img1,
-  output = NULL,
-  timestep = 0.5,
-  model = "rife-v4.6",
-  gpu = 0L
-) {
-  .check_rife()
-  rife::rife_interpolate(img0, img1, output,
-    timestep = timestep, model = model, gpu = gpu)
+rvf_interp <- function(img0, img1, output = NULL, timestep = 0.5,
+                       model = "rife-v4.6", gpu = 0L) {
+    .check_rife()
+    rife::rife_interpolate(img0, img1, output, timestep = timestep,
+                           model = model, gpu = gpu)
 }
 
 #' Check RIFE Availability
@@ -122,9 +104,9 @@ rvf_interp <- function(
 #'
 #' @export
 rvf_available <- function() {
-  tryCatch({
-      requireNamespace("rife", quietly = TRUE) &&
-      !is.null(rife::rife_info()$binary)
+    tryCatch({
+        requireNamespace("rife", quietly = TRUE) &&
+        !is.null(rife::rife_info()$binary)
     }, error = function(e) FALSE)
 }
 
@@ -139,15 +121,15 @@ rvf_available <- function() {
 #'
 #' @export
 rvf_info <- function() {
-  .check_rife()
-  rife::rife_info()
+    .check_rife()
+    rife::rife_info()
 }
 
 # Internal ----------------------------------------------------------------
 
 .check_rife <- function() {
-  if (!requireNamespace("rife", quietly = TRUE)) {
-    stop("rife package is required. Install with: remotes::install_github('cornball-ai/rife')")
-  }
+    if (!requireNamespace("rife", quietly = TRUE)) {
+        stop("rife package is required. Install with: remotes::install_github('cornball-ai/rife')")
+    }
 }
 
