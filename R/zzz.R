@@ -15,11 +15,7 @@
                    # Speech-to-video (faster-SadTalker-API)
                    xtx.stv_base = "http://localhost:10364",
                    # Background removal (rembg)
-                   xtx.rembg_base = "http://localhost:7824",
-                   # Transition (LTX-2 bridging) per-user defaults; override in ~/.Rprofile.
-                   # Fallbacks are the LTX-2.3 pipeline defaults (121 frames, 17-frame overlap).
-                   xtx.transition.num_frames = 121L,
-                   xtx.transition.conditioning_frames = 17L
+                   xtx.rembg_base = "http://localhost:7824"
     )
     toset <- !(names(op_xtx) %in% names(op))
     if (any(toset)) {
