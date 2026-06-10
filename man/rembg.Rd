@@ -22,8 +22,11 @@ The output file path (invisibly).
 Remove the background from an image using the rembg service (U2-Net).
 Returns a PNG with transparent background. Works on any background color -
 no greenscreen needed.
+}
+\details{
 The rembg service must be running. Start it with:
 \code{docker run -d --name rembg -p 7824:7824 danielgatis/rembg s --host 0.0.0.0 --port 7824}
+
 }
 \examples{
 \dontrun{

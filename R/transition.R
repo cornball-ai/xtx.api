@@ -29,7 +29,9 @@
 #' }
 #'
 #' @param start_clip Path to the source video (MP4). Its trailing frames seed
-#'   the bridge.
+#'   the bridge (prompt-type "V"). Supply this OR \code{image_start}, not both.
+#' @param image_start Path to a single start image (PNG/JPG) to begin from
+#'   (prompt-type "S"), the avatar-style start. Alternative to \code{start_clip}.
 #' @param end_image Optional path to a destination keyframe (PNG/JPG). Bounds
 #'   drift by forcing the bridge to arrive here.
 #' @param keyframe_images Optional character vector of image paths (PNG/JPG)
@@ -42,14 +44,24 @@
 #'   non-empty prompt).
 #' @param audio Optional path to an audio file. Requires a checkpoint with the
 #'   AV connector; unavailable on GGUF-light.
-#' @param num_frames Frames to generate; must be 8n+1 (LTX-2 constraint).
-#'   \code{NULL} (default) falls back to \code{getOption("xtx.transition.num_frames")}
-#'   and, if that is unset, to the server's canonical default.
+#' @param num_frames Frames to generate (the new/diffused content; 8n+1).
+#'   \code{NULL} (default) is sized from \code{audio} (\code{round(seconds*fps)},
+#'   snapped to 8n+1) when audio is given, else the \code{xtx.transition.num_frames}
+#'   option, else the server default. Generation time scales with this.
 #' @param conditioning_frames Trailing frames of \code{start_clip} used as motion
-#'   conditioning. \code{NULL} (default) falls back to
-#'   \code{getOption("xtx.transition.conditioning_frames")} and, if unset, to the
-#'   server default. Set per-box prefs in \code{~/.Rprofile}, e.g.
+#'   conditioning (free context, not diffused). \code{NULL} (default) falls back
+#'   to \code{getOption("xtx.transition.conditioning_frames")} then the server
+#'   default. Set per-box prefs in \code{~/.Rprofile}, e.g.
 #'   \code{options(xtx.transition.num_frames = 49, xtx.transition.conditioning_frames = 9)}.
+#' @param fill_window If TRUE, pad \code{conditioning_frames} to
+#'   \code{window - num_frames} so every call feeds the model a full
+#'   \code{window}-frame context (clamped to a valid range). Same diffusion cost
+#'   (conditioning isn't diffused), smoother continuity. Start-clip only.
+#' @param sliding_window_size,sliding_window_overlap,sliding_window_overlap_noise,sliding_window_discard_last_frames
+#'   LTX-2 sliding-window controls for content longer than one window (\code{NULL}
+#'   defers to the server). Only engaged when \code{num_frames > window}.
+#' @param fps,window Frame rate (default 24) and LTX-2 window size in frames
+#'   (default 129) used for audio-sizing and \code{fill_window} math.
 #' @param resolution \code{"480p"} or \code{"720p"} (default \code{"720p"}).
 #' @param quality \code{"fast"}, \code{"balanced"}, or \code{"quality"}
 #'   (default \code{"balanced"}).
@@ -82,32 +94,59 @@
 #'              num_frames = 49, output = "bridge.mp4")
 #' }
 #' @export
-transition <- function(start_clip, end_image = NULL, keyframe_images = NULL,
-                       keyframe_positions = NULL, prompt = NULL,
-                       audio = NULL, num_frames = NULL,
-                       conditioning_frames = NULL, resolution = "720p",
+transition <- function(start_clip = NULL, image_start = NULL, end_image = NULL,
+                       keyframe_images = NULL, keyframe_positions = NULL,
+                       prompt = NULL, audio = NULL, num_frames = NULL,
+                       conditioning_frames = NULL, fill_window = FALSE,
+                       sliding_window_size = NULL, sliding_window_overlap = NULL,
+                       sliding_window_overlap_noise = NULL,
+                       sliding_window_discard_last_frames = NULL,
+                       fps = 24, window = 129, resolution = "720p",
                        quality = "balanced", seed = NULL,
                        output = "transition_output.mp4", timeout = 1800,
                        backend = c("wan2gp_api")) {
     backend <- match.arg(backend)
 
-    .transition_wan2gp_api(start_clip = start_clip, end_image = end_image,
-                           keyframe_images = keyframe_images,
-                           keyframe_positions = keyframe_positions,
-                           prompt = prompt, audio = audio,
-                           num_frames = num_frames,
-                           conditioning_frames = conditioning_frames,
-                           resolution = resolution, quality = quality,
-                           seed = seed, output = output, timeout = timeout)
+    .transition_wan2gp_api(
+        start_clip = start_clip, image_start = image_start,
+        end_image = end_image, keyframe_images = keyframe_images,
+        keyframe_positions = keyframe_positions, prompt = prompt, audio = audio,
+        num_frames = num_frames, conditioning_frames = conditioning_frames,
+        fill_window = fill_window, sliding_window_size = sliding_window_size,
+        sliding_window_overlap = sliding_window_overlap,
+        sliding_window_overlap_noise = sliding_window_overlap_noise,
+        sliding_window_discard_last_frames = sliding_window_discard_last_frames,
+        fps = fps, window = window, resolution = resolution, quality = quality,
+        seed = seed, output = output, timeout = timeout)
 }
+
+#' Duration of a media file in seconds via ffprobe (NA on failure)
+#' @keywords internal
+.probe_duration <- function(file) {
+    out <- suppressWarnings(system2("ffprobe",
+                                    shQuote(c("-v", "error", "-show_entries",
+                                              "format=duration", "-of", "csv=p=0",
+                                              file)), stdout = TRUE, stderr = FALSE))
+    suppressWarnings(as.numeric(out[1]))
+}
+
+#' Snap a frame count to LTX-2's 8n+1 grid (floor at one step)
+#' @keywords internal
+.align_8nplus1 <- function(n) max(9L, as.integer(8 * round((n - 1) / 8) + 1))
 
 #' WanGP API Transition Backend
 #' @keywords internal
-.transition_wan2gp_api <- function(start_clip, end_image = NULL,
-                                   keyframe_images = NULL,
+.transition_wan2gp_api <- function(start_clip = NULL, image_start = NULL,
+                                   end_image = NULL, keyframe_images = NULL,
                                    keyframe_positions = NULL, prompt = NULL,
                                    audio = NULL, num_frames = NULL,
                                    conditioning_frames = NULL,
+                                   fill_window = FALSE,
+                                   sliding_window_size = NULL,
+                                   sliding_window_overlap = NULL,
+                                   sliding_window_overlap_noise = NULL,
+                                   sliding_window_discard_last_frames = NULL,
+                                   fps = 24, window = 129,
                                    resolution = "720p", quality = "balanced",
                                    seed = NULL,
                                    output = "transition_output.mp4",
@@ -121,15 +160,44 @@ transition <- function(start_clip, end_image = NULL, keyframe_images = NULL,
     base <- .wan2gp_api_get_base()
     url <- paste0(base, "/transition")
 
-    # Validate input files up front (clear R error before hitting the network).
-    if (!file.exists(start_clip)) {
+    # Start conditioning: a start image (prompt-type S) or a start clip's tail
+    # (V). Exactly one is required.
+    if (is.null(start_clip) && is.null(image_start)) {
+        stop("transition(): supply start_clip (video continuation) or ",
+             "image_start (single start frame).", call. = FALSE)
+    }
+    if (!is.null(start_clip) && !is.null(image_start)) {
+        stop("transition(): supply only one of start_clip / image_start.",
+             call. = FALSE)
+    }
+    if (!is.null(start_clip) && !file.exists(start_clip)) {
         stop("start_clip file not found: ", start_clip, call. = FALSE)
+    }
+    if (!is.null(image_start) && !file.exists(image_start)) {
+        stop("image_start file not found: ", image_start, call. = FALSE)
     }
     if (!is.null(end_image) && !file.exists(end_image)) {
         stop("end_image file not found: ", end_image, call. = FALSE)
     }
     if (!is.null(audio) && !file.exists(audio)) {
         stop("audio file not found: ", audio, call. = FALSE)
+    }
+
+    # Size num_frames (the new/diffused content) to the audio when unset -- a
+    # chunk's audio maps to its generated frames (num_frames is the new-content
+    # count, verified empirically, not the total).
+    if (is.null(num_frames) && !is.null(audio)) {
+        adur <- .probe_duration(audio)
+        if (!is.na(adur)) {
+            num_frames <- .align_8nplus1(round(adur * fps))
+        }
+    }
+    # fill_window: pad conditioning to a full `window`-frame context (free, not
+    # diffused) so every call feeds the model the same context size. Clamp to
+    # 1 <= conditioning < num_frames; only applies to a start-clip continuation.
+    if (isTRUE(fill_window) && !is.null(num_frames) && !is.null(start_clip)) {
+        conditioning_frames <- max(1L, min(num_frames - 1L,
+                                           as.integer(window) - num_frames))
     }
 
     # Keyframes: images and positions must line up; check files exist.
@@ -163,11 +231,18 @@ transition <- function(start_clip, end_image = NULL, keyframe_images = NULL,
     # wgp.py rejects an empty prompt (the task is skipped, surfacing as a 500), so
     # fall back to a generic transition prompt when the caller gives none.
     form_args <- list(
-                      start_clip = curl::form_file(start_clip),
                       prompt = prompt %||% "smooth cinematic transition",
                       resolution = resolution,
                       quality = quality
     )
+    # Start conditioning: video continuation (start_clip) or single frame
+    # (image_start). Exactly one is set (validated above).
+    if (!is.null(start_clip)) {
+        form_args$start_clip <- curl::form_file(start_clip)
+    }
+    if (!is.null(image_start)) {
+        form_args$image_start <- curl::form_file(image_start)
+    }
     # Optional files / params: send only when provided so the server applies its
     # own defaults otherwise.
     if (!is.null(end_image)) {
@@ -190,6 +265,20 @@ transition <- function(start_clip, end_image = NULL, keyframe_images = NULL,
     }
     if (!is.null(conditioning_frames)) {
         form_args$conditioning_frames <- as.character(conditioning_frames)
+    }
+    if (!is.null(sliding_window_size)) {
+        form_args$sliding_window_size <- as.character(sliding_window_size)
+    }
+    if (!is.null(sliding_window_overlap)) {
+        form_args$sliding_window_overlap <- as.character(sliding_window_overlap)
+    }
+    if (!is.null(sliding_window_overlap_noise)) {
+        form_args$sliding_window_overlap_noise <-
+            as.character(sliding_window_overlap_noise)
+    }
+    if (!is.null(sliding_window_discard_last_frames)) {
+        form_args$sliding_window_discard_last_frames <-
+            as.character(sliding_window_discard_last_frames)
     }
     if (!is.null(seed)) {
         form_args$seed <- as.character(seed)
