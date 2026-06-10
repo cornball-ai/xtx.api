@@ -3,15 +3,22 @@
 \alias{transition}
 \title{Generate a Bridging / Transition Clip (Video-to-Video)}
 \usage{
-transition(start_clip, end_image = NULL, keyframe_images = NULL,
-           keyframe_positions = NULL, prompt = NULL, audio = NULL,
-           num_frames = NULL, conditioning_frames = NULL, resolution = "720p",
-           quality = "balanced", seed = NULL, output = "transition_output.mp4",
-           timeout = 1800, backend = c("wan2gp_api"))
+transition(start_clip = NULL, image_start = NULL, end_image = NULL,
+           keyframe_images = NULL, keyframe_positions = NULL, prompt = NULL,
+           audio = NULL, num_frames = NULL, conditioning_frames = NULL,
+           fill_window = FALSE, sliding_window_size = NULL,
+           sliding_window_overlap = NULL, sliding_window_overlap_noise = NULL,
+           sliding_window_discard_last_frames = NULL, fps = 24, window = 129,
+           resolution = "720p", quality = "balanced", seed = NULL,
+           output = "transition_output.mp4", timeout = 1800,
+           backend = c("wan2gp_api"))
 }
 \arguments{
 \item{start_clip}{Path to the source video (MP4). Its trailing frames seed
-the bridge.}
+the bridge (prompt-type "V"). Supply this OR \code{image_start}, not both.}
+
+\item{image_start}{Path to a single start image (PNG/JPG) to begin from
+(prompt-type "S"), the avatar-style start. Alternative to \code{start_clip}.}
 
 \item{end_image}{Optional path to a destination keyframe (PNG/JPG). Bounds
 drift by forcing the bridge to arrive here.}
@@ -30,15 +37,21 @@ non-empty prompt).}
 \item{audio}{Optional path to an audio file. Requires a checkpoint with the
 AV connector; unavailable on GGUF-light.}
 
-\item{num_frames}{Frames to generate; must be 8n+1 (LTX-2 constraint).
-\code{NULL} (default) falls back to \code{getOption("xtx.transition.num_frames")}
-and, if that is unset, to the server's canonical default.}
+\item{num_frames}{Frames to generate (the new/diffused content; 8n+1).
+\code{NULL} (default) is sized from \code{audio} (\code{round(seconds*fps)},
+snapped to 8n+1) when audio is given, else the \code{xtx.transition.num_frames}
+option, else the server default. Generation time scales with this.}
 
 \item{conditioning_frames}{Trailing frames of \code{start_clip} used as motion
-conditioning. \code{NULL} (default) falls back to
-\code{getOption("xtx.transition.conditioning_frames")} and, if unset, to the
-server default. Set per-box prefs in \code{~/.Rprofile}, e.g.
+conditioning (free context, not diffused). \code{NULL} (default) falls back
+to \code{getOption("xtx.transition.conditioning_frames")} then the server
+default. Set per-box prefs in \code{~/.Rprofile}, e.g.
 \code{options(xtx.transition.num_frames = 49, xtx.transition.conditioning_frames = 9)}.}
+
+\item{fill_window}{If TRUE, pad \code{conditioning_frames} to
+\code{window - num_frames} so every call feeds the model a full
+\code{window}-frame context (clamped to a valid range). Same diffusion cost
+(conditioning isn't diffused), smoother continuity. Start-clip only.}
 
 \item{resolution}{\code{"480p"} or \code{"720p"} (default \code{"720p"}).}
 
@@ -53,6 +66,12 @@ Pass a fixed integer >= 0 for reproducible output / clean A/B comparisons.}
 \item{timeout}{Timeout in seconds (default 1800; transitions can be slow).}
 
 \item{backend}{Backend to use. Only \code{"wan2gp_api"} is supported.}
+
+\item{sliding_window_size,sliding_window_overlap,sliding_window_overlap_noise,sliding_window_discard_last_frames}{LTX-2 sliding-window controls for content longer than one window (\code{NULL}
+defers to the server). Only engaged when \code{num_frames > window}.}
+
+\item{fps,window}{Frame rate (default 24) and LTX-2 window size in frames
+(default 129) used for audio-sizing and \code{fill_window} math.}
 }
 \value{
 Invisibly, the path to the written MP4. Note the clip has
