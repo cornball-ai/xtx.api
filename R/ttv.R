@@ -39,6 +39,7 @@ ttv <- function(prompt, output = "ttv_output.mp4",
                 num_frames = 97L, resolution = "720p", quality = "balanced",
                 width = 832L, height = 832L, num_steps = NULL,
                 guidance_scale = NULL, seed = NULL, timeout = 600) {
+    .sidecar_arm(environment())
     if (missing(prompt) || nchar(prompt) == 0) {
         stop("'prompt' is required for text-to-video generation", call. = FALSE)
     }

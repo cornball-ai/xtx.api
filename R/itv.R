@@ -136,6 +136,7 @@ itv <- function(image, prompt = "", output = "itv_output.mp4",
                 width = 832L, height = 832L, resolution = "720p",
                 quality = "balanced", guidance_scale = NULL, seed = NULL,
                 timeout = 900) {
+    .sidecar_arm(environment())
     backend <- match.arg(backend)
 
     if (backend == "wan2gp_api") {

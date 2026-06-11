@@ -106,6 +106,7 @@ tti <- function(prompt,
                 guidance_scale = 7.5, seed = NULL, lora = NULL,
                 lora_scale = 0.8, devices = "cpu", response_format = "url",
                 file = NULL, timeout = 120) {
+    .sidecar_arm(environment(), "file")
     if (!is.character(prompt) || length(prompt) != 1 || nchar(prompt) == 0) {
         stop("'prompt' must be a non-empty character string", call. = FALSE)
     }

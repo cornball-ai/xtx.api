@@ -48,6 +48,7 @@ xtx_img_edit <- function(image, prompt, backend = c("openai", "diffuser"),
                          size = "1024x1024", strength = 0.8, steps = 50,
                          guidance_scale = 7.5, seed = NULL, devices = "cpu",
                          n = 1, response_format = "url", file = NULL) {
+    .sidecar_arm(environment(), "file")
     # Validate inputs
     if (!file.exists(image)) {
         stop("Image file not found: ", image, call. = FALSE)
@@ -213,6 +214,7 @@ xtx_img_edit <- function(image, prompt, backend = c("openai", "diffuser"),
 #' @export
 xtx_img_variation <- function(image, model = "dall-e-2", size = "1024x1024",
                               n = 1, response_format = "url", file = NULL) {
+    .sidecar_arm(environment(), "file")
     if (!file.exists(image)) {
         stop("Image file not found: ", image, call. = FALSE)
     }

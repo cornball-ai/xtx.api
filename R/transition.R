@@ -105,6 +105,7 @@ transition <- function(start_clip = NULL, image_start = NULL, end_image = NULL,
                        quality = "balanced", seed = NULL,
                        output = "transition_output.mp4", timeout = 1800,
                        backend = c("wan2gp_api")) {
+    .sidecar_arm(environment())
     backend <- match.arg(backend)
 
     .transition_wan2gp_api(
