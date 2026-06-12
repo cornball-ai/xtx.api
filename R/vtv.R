@@ -35,6 +35,7 @@ vtv <- function(video, prompt = "", output = "vtv_output.mp4",
                 height = 832L, num_frames = NULL, num_steps = NULL,
                 guidance_scale = NULL, strength = 0.5, seed = NULL,
                 timeout = 600) {
+    .sidecar_arm(environment())
     model <- match.arg(model)
 
     if (!file.exists(video)) {

@@ -27,6 +27,7 @@
 rvf_morph <- function(start, end, output = "morph.mp4", frames = 60L,
                       duration = NULL, fps = 30, model = "rife-v4.6",
                       gpu = 0L) {
+    .sidecar_arm(environment())
     .check_rife()
     rife::rife_morph(start, end, output, frames = frames,
                      duration = duration, fps = fps, model = model,
@@ -58,6 +59,7 @@ rvf_morph <- function(start, end, output = "morph.mp4", frames = 60L,
 #' @export
 rvf_smooth <- function(input, output = "smooth.mp4", factor = 2L,
                        model = "rife-v4.6", gpu = 0L) {
+    .sidecar_arm(environment())
     .check_rife()
     rife::rife_video(input, output, factor = factor, model = model, gpu = gpu)
 }
@@ -88,6 +90,7 @@ rvf_smooth <- function(input, output = "smooth.mp4", factor = 2L,
 #' @export
 rvf_interp <- function(img0, img1, output = NULL, timestep = 0.5,
                        model = "rife-v4.6", gpu = 0L) {
+    .sidecar_arm(environment())
     .check_rife()
     rife::rife_interpolate(img0, img1, output, timestep = timestep,
                            model = model, gpu = gpu)

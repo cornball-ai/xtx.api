@@ -85,6 +85,7 @@ rembg_health <- function() {
 #'
 #' @export
 rembg <- function(image, file = NULL, model = "u2net") {
+    .sidecar_arm(environment(), "file")
     if (!file.exists(image)) {
         stop("Image file not found: ", image, call. = FALSE)
     }

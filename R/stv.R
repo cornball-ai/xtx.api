@@ -226,6 +226,7 @@ stv <- function(image = NULL, audio, output = "stv_output.mp4",
                 sliding_window_overlap = NULL,
                 sliding_window_overlap_noise = NULL,
                 sliding_window_discard_last_frames = NULL) {
+    .sidecar_arm(environment())
     backend <- match.arg(backend)
 
     if (backend == "wan2gp_api") {

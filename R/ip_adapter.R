@@ -65,6 +65,7 @@ ip_adapter <- function(prompt, reference_image,
                        negative_prompt = "lowres, bad anatomy, worst quality, low quality",
                        steps = 30, guidance_scale = 7.5, width = 1024,
                        height = 1024, file = NULL, timeout = 300) {
+    .sidecar_arm(environment(), "file")
     if (!is.character(prompt) || length(prompt) != 1 || nchar(prompt) == 0) {
         stop("'prompt' must be a non-empty character string", call. = FALSE)
     }
