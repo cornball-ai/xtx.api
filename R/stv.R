@@ -216,7 +216,7 @@ stv_available <- function(port = NULL, timeout = 2) {
 #' }
 #' @export
 stv <- function(image = NULL, audio, output = "stv_output.mp4",
-                backend = c("sadtalker", "wan2gp", "wan2gp_api", "fal"),
+                backend = c("sadtalker", "wan2gp", "wan2gp_api", "fal", "diffuseR"),
                 model = NULL, face_id = NULL, enhance = FALSE,
                 prompt = "Person speaking naturally", resolution = "720p",
                 quality = "balanced", width = 832L, height = 832L,
@@ -228,6 +228,15 @@ stv <- function(image = NULL, audio, output = "stv_output.mp4",
                 sliding_window_discard_last_frames = NULL) {
     .sidecar_arm(environment())
     backend <- match.arg(backend)
+
+    if (backend == "diffuseR") {
+        # Native in-process LTX-2.3 via diffuseR (no container)
+        return(.stv_diffuseR(
+                             image = image, audio = audio, output = output,
+                             prompt = prompt, resolution = resolution,
+                             quality = quality, seed = seed
+        ))
+    }
 
     if (backend == "wan2gp_api") {
         # WanGP FastAPI backend (remote server via HTTP)

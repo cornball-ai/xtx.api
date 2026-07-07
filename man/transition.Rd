@@ -11,7 +11,7 @@ transition(start_clip = NULL, image_start = NULL, end_image = NULL,
            sliding_window_discard_last_frames = NULL, fps = 24, window = 129,
            resolution = "720p", quality = "balanced", seed = NULL,
            output = "transition_output.mp4", timeout = 1800,
-           backend = c("wan2gp_api"))
+           backend = c("wan2gp_api", "diffuseR"))
 }
 \arguments{
 \item{start_clip}{Path to the source video (MP4). Its trailing frames seed

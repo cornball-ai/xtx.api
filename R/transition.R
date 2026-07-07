@@ -104,9 +104,21 @@ transition <- function(start_clip = NULL, image_start = NULL, end_image = NULL,
                        fps = 24, window = 129, resolution = "720p",
                        quality = "balanced", seed = NULL,
                        output = "transition_output.mp4", timeout = 1800,
-                       backend = c("wan2gp_api")) {
+                       backend = c("wan2gp_api", "diffuseR")) {
     .sidecar_arm(environment())
     backend <- match.arg(backend)
+
+    if (backend == "diffuseR") {
+        return(.transition_diffuseR(
+                                    start_clip = start_clip, image_start = image_start,
+                                    prompt = prompt, audio = audio,
+                                    num_frames = num_frames,
+                                    conditioning_frames = conditioning_frames,
+                                    fps = fps, resolution = resolution,
+                                    quality = quality, seed = seed,
+                                    output = output
+        ))
+    }
 
     .transition_wan2gp_api(
         start_clip = start_clip, image_start = image_start,
