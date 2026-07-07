@@ -321,7 +321,7 @@ tti <- function(prompt,
         )
     }
 
-    model <- model %||% "sdxl"
+    model <- model %||% "flux2"
 
     diffuser_model <- switch(
                              model,
@@ -329,9 +329,19 @@ tti <- function(prompt,
                              "sd2.1" = "sd21",
                              "sdxl" = "sdxl",
                              "sd-xl" = "sdxl",
+                             "flux2" = "flux2",
+                             "flux" = "flux2",
                              stop("Unsupported diffuseR model: ", model,
-                                  ". Use 'sd21' or 'sdxl'.", call. = FALSE)
+                                  ". Use 'flux2', 'sdxl', or 'sd21'.",
+                                  call. = FALSE)
     )
+
+    if (diffuser_model == "flux2") {
+        # FLUX.2 klein-4B: guidance-free 4-step distilled model. It has
+        # no CFG (negative prompts don't apply), and the tti default of
+        # 50 steps belongs to the SD family, so it runs its own default.
+        return(.tti_flux2(prompt, size = size, seed = seed, file = file))
+    }
 
     # Get cached pipeline (loads once, reuses thereafter)
     p <- .xtx_get_diffuser_pipeline(diffuser_model, devices)
@@ -364,6 +374,49 @@ tti <- function(prompt,
                                    filename = file
             )
         }
+    })
+
+    list(
+         data = list(
+                     list(
+                          image = if (!is.null(file)) file else NULL,
+                          revised_prompt = NULL
+            )
+        ),
+         backend = "diffuseR"
+    )
+}
+
+#' Text-to-image via diffuseR FLUX.2 klein-4B
+#'
+#' Guidance-free 4-step distilled model; the pipeline is cached in the
+#' session like the SD pipelines (first call pays the ~32s load, later
+#' calls generate in ~48s at 1024x1024 on a 16GB card).
+#' @keywords internal
+.tti_flux2 <- function(prompt, size = NULL, seed = NULL, file = NULL) {
+    dims <- if (is.null(size)) {
+        c(1024L, 1024L)
+    } else {
+        as.integer(strsplit(size, "x", fixed = TRUE)[[1]])
+    }
+
+    pipe <- .diffuser_cache[["flux2"]]
+    if (is.null(pipe)) {
+        message("Loading diffuseR pipeline for flux2...")
+        pipe <- diffuseR::flux2_load_pipeline(device = "cuda")
+        .diffuser_cache[["flux2"]] <- pipe
+    }
+
+    torch::with_no_grad({
+        diffuseR::txt2img_flux2(
+                                prompt = prompt,
+                                pipeline = pipe,
+                                width = dims[1],
+                                height = dims[2],
+                                seed = seed,
+                                filename = file,
+                                verbose = FALSE
+        )
     })
 
     list(
