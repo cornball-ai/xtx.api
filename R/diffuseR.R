@@ -13,6 +13,29 @@ NULL
 
 .diffuseR_env <- new.env(parent = emptyenv())
 
+#' Unload the diffuseR backend's cached models
+#'
+#' The stand-up is lazy: the first \code{stv()}/\code{transition()}
+#' call with \code{backend = "diffuseR"} loads the LTX-2.3 pipeline
+#' (and, on first prompt, the Gemma3 text encoder) into a session
+#' cache that later chunks reuse. This is the teardown: it drops the
+#' cached pipeline, text encoder, and prompt embeddings so the host
+#' RAM (roughly 20 GB weights plus 48 GB Gemma3 when kept) returns to
+#' the system. Call it after a batch run -- the docker-stop
+#' equivalent. The next diffuseR call reloads from disk.
+#'
+#' @return Invisibly, NULL.
+#' @export
+diffuseR_unload <- function() {
+    rm(list = ls(.diffuseR_env), envir = .diffuseR_env)
+    gc(verbose = FALSE)
+    if (requireNamespace("torch", quietly = TRUE) &&
+        torch::cuda_is_available()) {
+        tryCatch(torch::cuda_empty_cache(), error = function(e) NULL)
+    }
+    invisible(NULL)
+}
+
 # Resolution presets for the avatar/talking-head convention (square,
 # /32-aligned; 960 matches the historical wan2gp chunk size)
 .diffuseR_size <- function(resolution) {

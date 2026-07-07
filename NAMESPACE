@@ -3,6 +3,7 @@
 export(benchmark)
 export(clear_diffuser_cache)
 export(compare_backends)
+export(diffuseR_unload)
 export(ip_adapter)
 export(ip_adapter_face)
 export(ip_adapter_style)
