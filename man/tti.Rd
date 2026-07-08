@@ -3,7 +3,7 @@
 \alias{tti}
 \title{Generate Image from Text}
 \usage{
-tti(prompt, backend = c("openai", "diffuseR", "diffusers_api", "fal", "auto"),
+tti(prompt, backend = c("openai", "diffuseR", "diffusers_api", "auto"),
     model = NULL, negative_prompt = NULL, size = NULL, quality = "standard",
     style = "vivid", n = 1, steps = 50, guidance_scale = 7.5, seed = NULL,
     lora = NULL, lora_scale = 0.8, devices = "cpu", response_format = "url",
@@ -16,14 +16,12 @@ tti(prompt, backend = c("openai", "diffuseR", "diffusers_api", "fal", "auto"),
 - "openai": DALL-E API (requires API key)
 - "diffuseR": Local diffuseR package
 - "diffusers_api": HTTP API (Z-Image-Turbo, SD)
-- "fal": fal.ai API (FLUX, SDXL - requires FAL_KEY)
 - "auto": Use diffuseR if available, else openai}
 
 \item{model}{Character. Model to use. Depends on backend:
 - OpenAI: "dall-e-3", "dall-e-2"
 - diffuseR: "sd21", "sdxl"
-- diffusers_api: "Tongyi-MAI/Z-Image-Turbo", any HF model ID
-- fal: "fal-ai/flux/dev", "fal-ai/flux/schnell", "fal-ai/fast-sdxl"}
+- diffusers_api: "Tongyi-MAI/Z-Image-Turbo", any HF model ID}
 
 \item{negative_prompt}{Character or NULL. Negative prompt (diffuseR, diffusers_api only).}
 

@@ -162,25 +162,25 @@ stv_available <- function(port = NULL, timeout = 2) {
 #' Generate Talking Head Video (Speech-to-Video)
 #'
 #' Generate an audio-driven talking head video from a portrait image and audio.
-#' Supports multiple backends: SadTalker (default), WanGP Docker, WanGP API, or fal.ai.
+#' Supports multiple backends: SadTalker (default), WanGP Docker, or WanGP API.
 #'
 #' @param image Path to portrait image (PNG/JPG, front-facing) or base64 string
 #' @param audio Path to speech audio file (WAV/MP3) or base64 string
 #' @param output Path for output video file (default: "stv_output.mp4")
 #' @param backend Backend to use: "sadtalker" (default), "wan2gp" (Docker),
-#'   "wan2gp_api" (HTTP API), or "fal" (cloud)
+#'   or "wan2gp_api" (HTTP API)
 #' @param model Model for wan2gp backend: "hunyuan" (real faces), "fantasy" (stylized),
-#'   or "ltx2" (general). For fal: "fal-ai/sadtalker" (default). Ignored for sadtalker.
+#'   or "ltx2" (general). Ignored for sadtalker.
 #' @param face_id Cached face ID for sadtalker (use instead of image for faster generation)
 #' @param enhance Apply GFPGAN face enhancement (sadtalker only)
-#' @param prompt Text prompt describing the scene (wan2gp and fal hunyuan-avatar)
+#' @param prompt Text prompt describing the scene (wan2gp)
 #' @param resolution Resolution for wan2gp_api: "480p" or "720p" (default: "720p")
 #' @param quality Quality preset for wan2gp_api: "fast", "balanced", or "quality" (default: "balanced")
 #' @param width Video width (wan2gp Docker only, default: 832)
 #' @param height Video height (wan2gp Docker only, default: 832)
-#' @param num_frames Number of frames (wan2gp and fal hunyuan-avatar, default: 129)
-#' @param num_inference_steps Number of inference steps (fal hunyuan-avatar, default: 30)
-#' @param turbo_mode Use turbo mode for faster generation (fal hunyuan-avatar, default: TRUE)
+#' @param num_frames Number of frames (wan2gp, default: 129)
+#' @param num_inference_steps Number of inference steps (unused; reserved)
+#' @param turbo_mode Use turbo mode for faster generation (unused; reserved)
 #' @param seed Random seed (wan2gp only)
 #' @param device Device to use: "cuda" or "cpu" (sadtalker only)
 #' @param timeout Request timeout in seconds (default: 600)
@@ -209,14 +209,10 @@ stv_available <- function(port = NULL, timeout = 2) {
 #'   wan2gp_api_base("http://gpu-server:8000")
 #'   stv("portrait.jpg", "speech.wav", backend = "wan2gp_api",
 #'       prompt = "Person speaking into microphone")
-#'
-#'   # Hunyuan Avatar via fal.ai (cloud API)
-#'   stv("portrait.jpg", "speech.wav", backend = "fal",
-#'       model = "fal-ai/hunyuan-avatar", prompt = "A person speaking")
 #' }
 #' @export
 stv <- function(image = NULL, audio, output = "stv_output.mp4",
-                backend = c("sadtalker", "wan2gp", "wan2gp_api", "fal", "diffuseR"),
+                backend = c("sadtalker", "wan2gp", "wan2gp_api", "diffuseR"),
                 model = NULL, face_id = NULL, enhance = FALSE,
                 prompt = "Person speaking naturally", resolution = "720p",
                 quality = "balanced", width = 832L, height = 832L,
@@ -257,12 +253,6 @@ stv <- function(image = NULL, audio, output = "stv_output.mp4",
                         sliding_window_overlap_noise = sliding_window_overlap_noise,
                         sliding_window_discard_last_frames = sliding_window_discard_last_frames
         )
-    } else if (backend == "fal") {
-        # fal.ai backend (SadTalker, Hunyuan Avatar, etc.)
-        .stv_fal(image = image, audio = audio, output = output,
-                 model = model, prompt = prompt, num_frames = num_frames,
-                 num_inference_steps = num_inference_steps,
-                 turbo_mode = turbo_mode, timeout = timeout)
     } else if (backend == "wan2gp") {
         # WanGP backend (Hunyuan/Fantasy/LTX-2)
         model <- model %||% "hunyuan"
@@ -438,78 +428,6 @@ stv_face_delete <- function(face_id) {
     }
 
     jsonlite::fromJSON(rawToChar(response$content), simplifyVector = FALSE)
-}
-
-#' Speech-to-video via fal.ai
-#' @keywords internal
-.stv_fal <- function(image, audio, output = "stv_output.mp4", model = NULL,
-                     prompt = NULL, num_frames = 129L,
-                     num_inference_steps = 30L, turbo_mode = TRUE,
-                     timeout = 600) {
-    if (!.xtx_has_fal()) {
-        stop("fal.api package is not installed.\n",
-             "Install with: remotes::install_github(\"cornball-ai/fal.api\")",
-             call. = FALSE)
-    }
-
-    if (is.null(image)) {
-        stop("'image' is required for fal backend", call. = FALSE)
-    }
-
-    # Default model
-    model <- model %||% "fal-ai/sadtalker"
-
-    # Check if hunyuan-avatar model (uses different param names)
-    is_hunyuan <- grepl("hunyuan-avatar", model, fixed = TRUE)
-
-    if (is_hunyuan) {
-        # Hunyuan Avatar uses different parameter names
-        # Resolve local files to URLs
-        image_url <- .fal_resolve_file_or_url(image)
-        audio_url <- .fal_resolve_file_or_url(audio)
-
-        result <- fal.api::fal_generate(
-                                        model = model,
-                                        image_url = image_url,
-                                        audio_url = audio_url,
-                                        text = prompt,
-                                        num_frames = as.integer(num_frames),
-                                        num_inference_steps = as.integer(num_inference_steps),
-                                        turbo_mode = turbo_mode,
-                                        .timeout = timeout,
-                                        .verbose = TRUE
-        )
-    } else {
-        # SadTalker and other models use fal_lipsync
-        result <- fal.api::fal_lipsync(
-                                       image = image,
-                                       audio = audio,
-                                       model = model,
-                                       .timeout = timeout
-        )
-    }
-
-    # Save video to output file
-    if (!is.null(result$video$url)) {
-        video_response <- curl::curl_fetch_memory(result$video$url)
-        writeBin(video_response$content, output)
-        message("STV video saved to: ", output)
-    }
-
-    invisible(output)
-}
-
-#' Resolve file path or URL for fal.ai
-#' @keywords internal
-.fal_resolve_file_or_url <- function(path) {
-    # If already a URL, return as-is
-    if (grepl("^https?://", path)) {
-        return(path)
-    }
-
-    # Use fal.api's file resolver (uploads local files)
-    # Using ::: since fal.api is a cornyverse internal package
-    fal.api:::.fal_resolve_file(path)
 }
 
 #' Speech-to-video via WanGP API

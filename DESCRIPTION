@@ -20,7 +20,6 @@ Imports:
     jsonlite
 Suggests:
     diffuseR,
-    fal.api,
     gpu.ctl,
     rife,
     tinytest,
