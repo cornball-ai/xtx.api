@@ -128,18 +128,11 @@ tti <- function(prompt,
 
     # Dispatch to appropriate backend
     if (backend == "diffusers_api") {
-        .tti_diffusers_api(
-                           prompt = prompt,
-                           model = model,
-                           negative_prompt = negative_prompt,
-                           size = size,
-                           steps = steps,
-                           guidance_scale = guidance_scale,
-                           lora = lora,
-                           lora_scale = lora_scale,
-                           file = file,
-                           timeout = timeout
-        )
+        .tti_diffusers_api(prompt = prompt, model = model,
+                           negative_prompt = negative_prompt, size = size,
+                           steps = steps, guidance_scale = guidance_scale,
+                           lora = lora, lora_scale = lora_scale, file = file,
+                           timeout = timeout)
     } else if (backend == "diffuseR") {
         .tti_diffuser(
                       prompt = prompt,
@@ -325,8 +318,7 @@ tti <- function(prompt,
                              "flux2" = "flux2",
                              "flux" = "flux2",
                              stop("Unsupported diffuseR model: ", model,
-                                  ". Use 'flux2', 'sdxl', or 'sd21'.",
-                                  call. = FALSE)
+                                  ". Use 'flux2', 'sdxl', or 'sd21'.", call. = FALSE)
     )
 
     if (diffuser_model == "flux2") {
@@ -401,15 +393,9 @@ tti <- function(prompt,
     }
 
     torch::with_no_grad({
-        diffuseR::txt2img_flux2(
-                                prompt = prompt,
-                                pipeline = pipe,
-                                width = dims[1],
-                                height = dims[2],
-                                seed = seed,
-                                filename = file,
-                                verbose = FALSE
-        )
+        diffuseR::txt2img_flux2(prompt = prompt, pipeline = pipe,
+                                width = dims[1], height = dims[2],
+                                seed = seed, filename = file, verbose = FALSE)
     })
 
     list(
@@ -422,4 +408,3 @@ tti <- function(prompt,
          backend = "diffuseR"
     )
 }
-

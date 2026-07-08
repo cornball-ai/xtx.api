@@ -251,4 +251,3 @@ ip_adapter_style <- function(prompt, style_image, file, scale = 0.8, ...) {
                ip_adapter_type = "plus", ip_adapter_scale = scale,
                file = file, ...)
 }
-

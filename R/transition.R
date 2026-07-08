@@ -94,14 +94,16 @@
 #'              num_frames = 49, output = "bridge.mp4")
 #' }
 #' @export
-transition <- function(start_clip = NULL, image_start = NULL, end_image = NULL,
-                       keyframe_images = NULL, keyframe_positions = NULL,
-                       prompt = NULL, audio = NULL, num_frames = NULL,
+transition <- function(start_clip = NULL, image_start = NULL,
+                       end_image = NULL, keyframe_images = NULL,
+                       keyframe_positions = NULL, prompt = NULL,
+                       audio = NULL, num_frames = NULL,
                        conditioning_frames = NULL, fill_window = FALSE,
-                       sliding_window_size = NULL, sliding_window_overlap = NULL,
+                       sliding_window_size = NULL,
+                       sliding_window_overlap = NULL,
                        sliding_window_overlap_noise = NULL,
-                       sliding_window_discard_last_frames = NULL,
-                       fps = 24, window = 129, resolution = "720p",
+                       sliding_window_discard_last_frames = NULL, fps = 24,
+                       window = 129, resolution = "720p",
                        quality = "balanced", seed = NULL,
                        output = "transition_output.mp4", timeout = 1800,
                        backend = c("wan2gp_api", "diffuseR")) {
@@ -109,37 +111,35 @@ transition <- function(start_clip = NULL, image_start = NULL, end_image = NULL,
     backend <- match.arg(backend)
 
     if (backend == "diffuseR") {
-        return(.transition_diffuseR(
-                                    start_clip = start_clip, image_start = image_start,
+        return(.transition_diffuseR(start_clip = start_clip,
+                                    image_start = image_start,
                                     prompt = prompt, audio = audio,
                                     num_frames = num_frames,
                                     conditioning_frames = conditioning_frames,
                                     fps = fps, resolution = resolution,
                                     quality = quality, seed = seed,
-                                    output = output
-        ))
+                                    output = output))
     }
 
     .transition_wan2gp_api(
-        start_clip = start_clip, image_start = image_start,
-        end_image = end_image, keyframe_images = keyframe_images,
-        keyframe_positions = keyframe_positions, prompt = prompt, audio = audio,
-        num_frames = num_frames, conditioning_frames = conditioning_frames,
-        fill_window = fill_window, sliding_window_size = sliding_window_size,
-        sliding_window_overlap = sliding_window_overlap,
-        sliding_window_overlap_noise = sliding_window_overlap_noise,
-        sliding_window_discard_last_frames = sliding_window_discard_last_frames,
-        fps = fps, window = window, resolution = resolution, quality = quality,
-        seed = seed, output = output, timeout = timeout)
+                           start_clip = start_clip, image_start = image_start,
+                           end_image = end_image, keyframe_images = keyframe_images,
+                           keyframe_positions = keyframe_positions, prompt = prompt, audio = audio,
+                           num_frames = num_frames, conditioning_frames = conditioning_frames,
+                           fill_window = fill_window, sliding_window_size = sliding_window_size,
+                           sliding_window_overlap = sliding_window_overlap,
+                           sliding_window_overlap_noise = sliding_window_overlap_noise,
+                           sliding_window_discard_last_frames = sliding_window_discard_last_frames,
+                           fps = fps, window = window, resolution = resolution, quality = quality,
+                           seed = seed, output = output, timeout = timeout)
 }
 
 #' Duration of a media file in seconds via ffprobe (NA on failure)
 #' @keywords internal
 .probe_duration <- function(file) {
     out <- suppressWarnings(system2("ffprobe",
-                                    shQuote(c("-v", "error", "-show_entries",
-                                              "format=duration", "-of", "csv=p=0",
-                                              file)), stdout = TRUE, stderr = FALSE))
+                                    shQuote(c("-v", "error", "-show_entries", "format=duration",
+                    "-of", "csv=p=0", file)), stdout = TRUE, stderr = FALSE))
     suppressWarnings(as.numeric(out[1]))
 }
 
@@ -210,7 +210,7 @@ transition <- function(start_clip = NULL, image_start = NULL, end_image = NULL,
     # 1 <= conditioning < num_frames; only applies to a start-clip continuation.
     if (isTRUE(fill_window) && !is.null(num_frames) && !is.null(start_clip)) {
         conditioning_frames <- max(1L, min(num_frames - 1L,
-                                           as.integer(window) - num_frames))
+                as.integer(window) - num_frames))
     }
 
     # Keyframes: images and positions must line up; check files exist.
@@ -287,11 +287,11 @@ transition <- function(start_clip = NULL, image_start = NULL, end_image = NULL,
     }
     if (!is.null(sliding_window_overlap_noise)) {
         form_args$sliding_window_overlap_noise <-
-            as.character(sliding_window_overlap_noise)
+        as.character(sliding_window_overlap_noise)
     }
     if (!is.null(sliding_window_discard_last_frames)) {
         form_args$sliding_window_discard_last_frames <-
-            as.character(sliding_window_discard_last_frames)
+        as.character(sliding_window_discard_last_frames)
     }
     if (!is.null(seed)) {
         form_args$seed <- as.character(seed)
@@ -351,4 +351,3 @@ transition_available <- function(timeout = 2) {
         res$status_code == 200
     }, error = function(e) FALSE)
 }
-

@@ -227,11 +227,9 @@ stv <- function(image = NULL, audio, output = "stv_output.mp4",
 
     if (backend == "diffuseR") {
         # Native in-process LTX-2.3 via diffuseR (no container)
-        return(.stv_diffuseR(
-                             image = image, audio = audio, output = output,
+        return(.stv_diffuseR(image = image, audio = audio, output = output,
                              prompt = prompt, resolution = resolution,
-                             quality = quality, seed = seed
-        ))
+                             quality = quality, seed = seed))
     }
 
     if (backend == "wan2gp_api") {
@@ -616,4 +614,3 @@ wan2gp_api_available <- function() {
         res$status_code == 200
     }, error = function(e) FALSE)
 }
-

@@ -67,4 +67,3 @@
         invisible(FALSE)
     })
 }
-

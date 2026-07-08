@@ -70,4 +70,3 @@ ttv <- function(prompt, output = "ttv_output.mp4",
         )
     }
 }
-

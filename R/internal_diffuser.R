@@ -72,4 +72,3 @@ clear_diffuser_cache <- function() {
     rm(list = ls(.diffuser_cache), envir = .diffuser_cache)
     invisible(NULL)
 }
-

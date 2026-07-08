@@ -236,4 +236,3 @@ itv_models <- function() {
 
     jsonlite::fromJSON(rawToChar(response$content))
 }
-
