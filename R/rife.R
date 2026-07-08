@@ -135,4 +135,3 @@ rvf_info <- function() {
         stop("rife package is required. Install with: remotes::install_github('cornball-ai/rife')")
     }
 }
-

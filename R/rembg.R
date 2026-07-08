@@ -125,4 +125,3 @@ rembg <- function(image, file = NULL, model = "u2net") {
     message("Saved to: ", file)
     invisible(file)
 }
-

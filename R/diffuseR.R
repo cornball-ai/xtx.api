@@ -39,11 +39,8 @@ diffuseR_unload <- function() {
 # Resolution presets for the avatar/talking-head convention (square,
 # /32-aligned; 960 matches the historical wan2gp chunk size)
 .diffuseR_size <- function(resolution) {
-    switch(resolution,
-           "480p" = 640L,
-           "720p" = 960L,
-           stop("Unsupported resolution: ", resolution, call. = FALSE)
-    )
+    switch(resolution, "480p" = 640L, "720p" = 960L,
+           stop("Unsupported resolution: ", resolution, call. = FALSE))
 }
 
 .diffuseR_pipeline <- function() {
@@ -61,7 +58,7 @@ diffuseR_unload <- function() {
         }
         message("diffuseR backend: loading LTX-2.3 pipeline (once per session)...")
         pipe <- diffuseR::ltx23_load_pipeline(nf4_dir, device = "cuda",
-                                              verbose = FALSE)
+            verbose = FALSE)
         .diffuseR_env$pipeline <- pipe
     }
     pipe
@@ -76,14 +73,12 @@ diffuseR_unload <- function() {
     te <- .diffuseR_env$text_encoder
     if (is.null(te)) {
         message("diffuseR backend: loading Gemma3 text encoder (CPU)...")
-        te_dir <- dirname(hfhub::hub_download(
-            "Lightricks/LTX-2", "text_encoder/config.json",
-            local_files_only = TRUE
-        ))
+        te_dir <- dirname(hfhub::hub_download("Lightricks/LTX-2",
+                "text_encoder/config.json", local_files_only = TRUE))
         tok_dir <- dirname(hfhub::hub_download(
-            "Lightricks/LTX-2", "tokenizer/tokenizer.json",
-            local_files_only = TRUE
-        ))
+                "Lightricks/LTX-2", "tokenizer/tokenizer.json",
+                local_files_only = TRUE
+            ))
         te <- list(
                    model = diffuseR::load_gemma3_text_encoder(te_dir,
                 device = "cpu", dtype = "float32"),
@@ -103,8 +98,8 @@ diffuseR_unload <- function() {
 
 #' stv() via diffuseR: start image + audio -> audio-driven talking head
 #' @keywords internal
-.stv_diffuseR <- function(image, audio, output, prompt, resolution,
-                          quality, seed = NULL, timeout = NULL) {
+.stv_diffuseR <- function(image, audio, output, prompt, resolution, quality,
+                          seed = NULL, timeout = NULL) {
     if (is.null(image)) {
         stop("'image' is required for the diffuseR backend", call. = FALSE)
     }
@@ -117,19 +112,12 @@ diffuseR_unload <- function() {
 
     pipe <- .diffuseR_pipeline()
     emb <- .diffuseR_prompt_embeds(prompt)
-    diffuseR::txt2vid_ltx2(
-                           prompt = prompt,
-                           pipeline = pipe,
-                           prompt_embeds = emb,
-                           image = image,
-                           audio = audio,
+    diffuseR::txt2vid_ltx2(prompt = prompt, pipeline = pipe,
+                           prompt_embeds = emb, image = image, audio = audio,
                            width = size, height = size,
                            num_frames = num_frames, frame_rate = 24,
-                           seed = seed,
-                           device = "cuda", dtype = "bfloat16",
-                           filename = output,
-                           verbose = FALSE
-    )
+                           seed = seed, device = "cuda", dtype = "bfloat16",
+                           filename = output, verbose = FALSE)
     invisible(output)
 }
 
@@ -143,9 +131,9 @@ diffuseR_unload <- function() {
 .transition_diffuseR <- function(start_clip = NULL, image_start = NULL,
                                  prompt = NULL, audio = NULL,
                                  num_frames = NULL,
-                                 conditioning_frames = NULL,
-                                 fps = 24, resolution = "720p",
-                                 quality = "balanced", seed = NULL,
+                                 conditioning_frames = NULL, fps = 24,
+                                 resolution = "720p", quality = "balanced",
+                                 seed = NULL,
                                  output = "transition_output.mp4",
                                  timeout = NULL) {
     if (is.null(start_clip) && is.null(image_start)) {

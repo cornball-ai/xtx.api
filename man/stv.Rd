@@ -4,13 +4,12 @@
 \title{Generate Talking Head Video (Speech-to-Video)}
 \usage{
 stv(image = NULL, audio, output = "stv_output.mp4",
-    backend = c("sadtalker", "wan2gp", "wan2gp_api", "fal", "diffuseR"),
-    model = NULL, face_id = NULL, enhance = FALSE,
-    prompt = "Person speaking naturally", resolution = "720p",
-    quality = "balanced", width = 832L, height = 832L, num_frames = 129L,
-    num_inference_steps = 30L, turbo_mode = TRUE, seed = NULL, device = "cuda",
-    timeout = 600, sliding_window_size = NULL, sliding_window_overlap = NULL,
-    sliding_window_overlap_noise = NULL,
+    backend = c("sadtalker", "wan2gp", "wan2gp_api", "diffuseR"), model = NULL,
+    face_id = NULL, enhance = FALSE, prompt = "Person speaking naturally",
+    resolution = "720p", quality = "balanced", width = 832L, height = 832L,
+    num_frames = 129L, num_inference_steps = 30L, turbo_mode = TRUE,
+    seed = NULL, device = "cuda", timeout = 600, sliding_window_size = NULL,
+    sliding_window_overlap = NULL, sliding_window_overlap_noise = NULL,
     sliding_window_discard_last_frames = NULL)
 }
 \arguments{
@@ -21,16 +20,16 @@ stv(image = NULL, audio, output = "stv_output.mp4",
 \item{output}{Path for output video file (default: "stv_output.mp4")}
 
 \item{backend}{Backend to use: "sadtalker" (default), "wan2gp" (Docker),
-"wan2gp_api" (HTTP API), or "fal" (cloud)}
+or "wan2gp_api" (HTTP API)}
 
 \item{model}{Model for wan2gp backend: "hunyuan" (real faces), "fantasy" (stylized),
-or "ltx2" (general). For fal: "fal-ai/sadtalker" (default). Ignored for sadtalker.}
+or "ltx2" (general). Ignored for sadtalker.}
 
 \item{face_id}{Cached face ID for sadtalker (use instead of image for faster generation)}
 
 \item{enhance}{Apply GFPGAN face enhancement (sadtalker only)}
 
-\item{prompt}{Text prompt describing the scene (wan2gp and fal hunyuan-avatar)}
+\item{prompt}{Text prompt describing the scene (wan2gp)}
 
 \item{resolution}{Resolution for wan2gp_api: "480p" or "720p" (default: "720p")}
 
@@ -40,11 +39,11 @@ or "ltx2" (general). For fal: "fal-ai/sadtalker" (default). Ignored for sadtalke
 
 \item{height}{Video height (wan2gp Docker only, default: 832)}
 
-\item{num_frames}{Number of frames (wan2gp and fal hunyuan-avatar, default: 129)}
+\item{num_frames}{Number of frames (wan2gp, default: 129)}
 
-\item{num_inference_steps}{Number of inference steps (fal hunyuan-avatar, default: 30)}
+\item{num_inference_steps}{Number of inference steps (unused; reserved)}
 
-\item{turbo_mode}{Use turbo mode for faster generation (fal hunyuan-avatar, default: TRUE)}
+\item{turbo_mode}{Use turbo mode for faster generation (unused; reserved)}
 
 \item{seed}{Random seed (wan2gp only)}
 
@@ -73,7 +72,7 @@ Invisibly returns the output file path
 }
 \description{
 Generate an audio-driven talking head video from a portrait image and audio.
-Supports multiple backends: SadTalker (default), WanGP Docker, WanGP API, or fal.ai.
+Supports multiple backends: SadTalker (default), WanGP Docker, or WanGP API.
 }
 \examples{
 \dontrun{
@@ -87,9 +86,5 @@ Supports multiple backends: SadTalker (default), WanGP Docker, WanGP API, or fal
   wan2gp_api_base("http://gpu-server:8000")
   stv("portrait.jpg", "speech.wav", backend = "wan2gp_api",
       prompt = "Person speaking into microphone")
-
-  # Hunyuan Avatar via fal.ai (cloud API)
-  stv("portrait.jpg", "speech.wav", backend = "fal",
-      model = "fal-ai/hunyuan-avatar", prompt = "A person speaking")
 }
 }

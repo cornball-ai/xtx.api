@@ -26,4 +26,3 @@ xtx_set_api_base <- function(url) {
     options(xtx.api_base = url)
     invisible(old)
 }
-

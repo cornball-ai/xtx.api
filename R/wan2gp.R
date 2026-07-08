@@ -364,4 +364,3 @@ wan2gp_available <- function() {
     }, error = function(e) FALSE)
     result
 }
-

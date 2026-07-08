@@ -101,4 +101,3 @@ xtx_backends <- function() {
         )
     )
 }
-

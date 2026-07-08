@@ -4,7 +4,7 @@
 \title{Generate Video from Image (Image-to-Video)}
 \usage{
 itv(image, prompt = "", output = "itv_output.mp4",
-    backend = c("cogvideo", "wan2gp_api", "wan2gp", "fal"), model = NULL,
+    backend = c("cogvideo", "wan2gp_api", "wan2gp"), model = NULL,
     num_frames = NULL, num_steps = NULL, width = 832L, height = 832L,
     resolution = "720p", quality = "balanced", guidance_scale = NULL,
     seed = NULL, timeout = 900)
@@ -16,10 +16,10 @@ itv(image, prompt = "", output = "itv_output.mp4",
 
 \item{output}{Path for output video file (default: "itv_output.mp4")}
 
-\item{backend}{Backend to use: "cogvideo" (default), "wan2gp" (Docker), "wan2gp_api" (HTTP), or "fal"}
+\item{backend}{Backend to use: "cogvideo" (default), "wan2gp" (Docker), or "wan2gp_api" (HTTP)}
 
 \item{model}{Model ID. For cogvideo: "THUDM/CogVideoX-5b-I2V".
-For wan2gp: "ltx2" (default). For fal: "fal-ai/ltx-video" (default)}
+For wan2gp: "ltx2" (default).}
 
 \item{num_frames}{Number of frames to generate (default: 49 for cogvideo, 129 for wan2gp)}
 
@@ -44,7 +44,7 @@ Invisibly returns the output file path
 }
 \description{
 Generate a video from an input image and motion prompt.
-Supports multiple backends: CogVideoX, WanGP, or fal.ai.
+Supports multiple backends: CogVideoX or WanGP.
 }
 \examples{
 \dontrun{

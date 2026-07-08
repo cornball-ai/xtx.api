@@ -20,4 +20,3 @@ xtx_set_api_key <- function(key) {
     options(xtx.api_key = key)
     invisible(old)
 }
-

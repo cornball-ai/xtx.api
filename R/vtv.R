@@ -53,4 +53,3 @@ vtv <- function(video, prompt = "", output = "vtv_output.mp4",
                      guidance_scale = guidance_scale, seed = seed,
                      timeout = timeout)
 }
-

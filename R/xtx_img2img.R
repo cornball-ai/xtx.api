@@ -246,4 +246,3 @@ xtx_img_variation <- function(image, model = "dall-e-2", size = "1024x1024",
 
     result
 }
-

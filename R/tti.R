@@ -40,13 +40,11 @@ tti_base <- function(url) {
 #'   - "openai": DALL-E API (requires API key)
 #'   - "diffuseR": Local diffuseR package
 #'   - "diffusers_api": HTTP API (Z-Image-Turbo, SD)
-#'   - "fal": fal.ai API (FLUX, SDXL - requires FAL_KEY)
 #'   - "auto": Use diffuseR if available, else openai
 #' @param model Character. Model to use. Depends on backend:
 #'   - OpenAI: "dall-e-3", "dall-e-2"
 #'   - diffuseR: "sd21", "sdxl"
 #'   - diffusers_api: "Tongyi-MAI/Z-Image-Turbo", any HF model ID
-#'   - fal: "fal-ai/flux/dev", "fal-ai/flux/schnell", "fal-ai/fast-sdxl"
 #' @param negative_prompt Character or NULL. Negative prompt (diffuseR, diffusers_api only).
 #' @param size Character. Image dimensions (e.g., "1024x1024").
 #' @param quality Character. Image quality: "standard" or "hd" (DALL-E 3 only).
@@ -100,7 +98,7 @@ tti_base <- function(url) {
 #'
 #' @export
 tti <- function(prompt,
-                backend = c("openai", "diffuseR", "diffusers_api", "fal", "auto"),
+                backend = c("openai", "diffuseR", "diffusers_api", "auto"),
                 model = NULL, negative_prompt = NULL, size = NULL,
                 quality = "standard", style = "vivid", n = 1, steps = 50,
                 guidance_scale = 7.5, seed = NULL, lora = NULL,
@@ -129,24 +127,12 @@ tti <- function(prompt,
     }
 
     # Dispatch to appropriate backend
-    if (backend == "fal") {
-        .tti_fal(prompt = prompt, model = model,
-                 negative_prompt = negative_prompt, size = size,
-                 steps = steps, guidance_scale = guidance_scale, seed = seed,
-                 file = file, timeout = timeout)
-    } else if (backend == "diffusers_api") {
-        .tti_diffusers_api(
-                           prompt = prompt,
-                           model = model,
-                           negative_prompt = negative_prompt,
-                           size = size,
-                           steps = steps,
-                           guidance_scale = guidance_scale,
-                           lora = lora,
-                           lora_scale = lora_scale,
-                           file = file,
-                           timeout = timeout
-        )
+    if (backend == "diffusers_api") {
+        .tti_diffusers_api(prompt = prompt, model = model,
+                           negative_prompt = negative_prompt, size = size,
+                           steps = steps, guidance_scale = guidance_scale,
+                           lora = lora, lora_scale = lora_scale, file = file,
+                           timeout = timeout)
     } else if (backend == "diffuseR") {
         .tti_diffuser(
                       prompt = prompt,
@@ -332,8 +318,7 @@ tti <- function(prompt,
                              "flux2" = "flux2",
                              "flux" = "flux2",
                              stop("Unsupported diffuseR model: ", model,
-                                  ". Use 'flux2', 'sdxl', or 'sd21'.",
-                                  call. = FALSE)
+                                  ". Use 'flux2', 'sdxl', or 'sd21'.", call. = FALSE)
     )
 
     if (diffuser_model == "flux2") {
@@ -408,15 +393,9 @@ tti <- function(prompt,
     }
 
     torch::with_no_grad({
-        diffuseR::txt2img_flux2(
-                                prompt = prompt,
-                                pipeline = pipe,
-                                width = dims[1],
-                                height = dims[2],
-                                seed = seed,
-                                filename = file,
-                                verbose = FALSE
-        )
+        diffuseR::txt2img_flux2(prompt = prompt, pipeline = pipe,
+                                width = dims[1], height = dims[2],
+                                seed = seed, filename = file, verbose = FALSE)
     })
 
     list(
@@ -429,81 +408,3 @@ tti <- function(prompt,
          backend = "diffuseR"
     )
 }
-
-#' Text-to-image via fal.ai
-#' @keywords internal
-.tti_fal <- function(prompt, model = NULL, negative_prompt = NULL,
-                     size = NULL, steps = 50, guidance_scale = 7.5,
-                     seed = NULL, file = NULL, timeout = 300) {
-    if (!.xtx_has_fal()) {
-        stop("fal.api package is not installed.\n",
-             "Install with: remotes::install_github(\"cornball-ai/fal.api\")",
-             call. = FALSE)
-    }
-
-    # Default model
-    model <- model %||% "fal-ai/flux/schnell"
-
-    # Build parameters for fal.api
-    params <- list(prompt = prompt)
-
-    if (!is.null(negative_prompt) && nchar(negative_prompt) > 0) {
-        params$negative_prompt <- negative_prompt
-    }
-
-    if (!is.null(size)) {
-        params$image_size <- size
-    }
-
-    if (!is.null(steps)) {
-        params$num_inference_steps <- as.integer(steps)
-    }
-
-    if (!is.null(guidance_scale)) {
-        params$guidance_scale <- guidance_scale
-    }
-
-    if (!is.null(seed)) {
-        params$seed <- as.integer(seed)
-    }
-
-    # Call fal.api
-    result <- fal.api::fal_generate(
-                                    model = model,
-                                    prompt = params$prompt,
-                                    negative_prompt = params$negative_prompt,
-                                    image_size = params$image_size,
-                                    num_inference_steps = params$num_inference_steps,
-                                    guidance_scale = params$guidance_scale,
-                                    seed = params$seed,
-                                    .timeout = timeout
-    )
-
-    # Save to file if requested
-    if (!is.null(file) && !is.null(result$images) &&
-        length(result$images) > 0) {
-        img_url <- result$images[[1]]$url
-        if (!is.null(img_url)) {
-            img_response <- curl::curl_fetch_memory(img_url)
-            writeBin(img_response$content, file)
-            message("Image saved to: ", file)
-        }
-    }
-
-    # Normalize response structure
-    list(
-         data = lapply(result$images %||% list(), function(img) {
-        list(url = img$url, revised_prompt = NULL)
-    }),
-         images = result$images,
-         seed = result$seed,
-         backend = "fal"
-    )
-}
-
-#' Check if fal.api is available
-#' @keywords internal
-.xtx_has_fal <- function() {
-    requireNamespace("fal.api", quietly = TRUE)
-}
-

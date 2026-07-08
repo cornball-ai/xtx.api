@@ -51,4 +51,3 @@ xtx_health <- function() {
 
     result
 }
-

@@ -120,4 +120,3 @@ compare_backends <- function(prompt, backends = NULL, ...) {
     print(results)
     invisible(results)
 }
-
