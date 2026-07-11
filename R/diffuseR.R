@@ -58,7 +58,7 @@ diffuseR_unload <- function() {
         }
         message("diffuseR backend: loading LTX-2.3 pipeline (once per session)...")
         pipe <- diffuseR::ltx23_load_pipeline(nf4_dir, device = "cuda",
-            verbose = FALSE)
+            verbose = getOption("xtx.diffuseR.verbose", FALSE))
         .diffuseR_env$pipeline <- pipe
     }
     pipe
@@ -117,7 +117,8 @@ diffuseR_unload <- function() {
                            width = size, height = size,
                            num_frames = num_frames, frame_rate = 24,
                            seed = seed, device = "cuda", dtype = "bfloat16",
-                           filename = output, verbose = FALSE)
+                           filename = output,
+                           verbose = getOption("xtx.diffuseR.verbose", FALSE))
     invisible(output)
 }
 
@@ -191,7 +192,7 @@ diffuseR_unload <- function() {
                                seed = seed,
                                device = "cuda", dtype = "bfloat16",
                                filename = output,
-                               verbose = FALSE
+                               verbose = getOption("xtx.diffuseR.verbose", FALSE)
         )
     } else {
         size <- .diffuseR_size(resolution)
@@ -206,7 +207,7 @@ diffuseR_unload <- function() {
                                seed = seed,
                                device = "cuda", dtype = "bfloat16",
                                filename = output,
-                               verbose = FALSE
+                               verbose = getOption("xtx.diffuseR.verbose", FALSE)
         )
     }
     invisible(output)
