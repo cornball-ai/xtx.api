@@ -1,3 +1,11 @@
+# xtx.api 0.1.0.4
+
+* The diffuseR backend surfaces generation progress by default: the
+  stv()/transition() LTX-2.3 calls and tti()'s FLUX.2 path pass
+  verbose = "progress" (diffuseR >= 0.1.0.10) instead of running
+  silent; options(xtx.diffuseR.verbose =) still overrides the video
+  paths.
+
 # xtx.api 0.1.0.1
 
 * Add `transition()` and `transition_available()`: generate a bridging clip
