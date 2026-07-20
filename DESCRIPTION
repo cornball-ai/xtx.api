@@ -19,7 +19,7 @@ Imports:
     curl,
     jsonlite
 Suggests:
-    diffuseR,
+    diffuseR (>= 0.1.0.10),
     gpu.ctl,
     rife,
     tinytest,

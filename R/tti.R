@@ -395,7 +395,8 @@ tti <- function(prompt,
     torch::with_no_grad({
         diffuseR::txt2img_flux2(prompt = prompt, pipeline = pipe,
                                 width = dims[1], height = dims[2],
-                                seed = seed, filename = file, verbose = FALSE)
+                                seed = seed, filename = file,
+                                verbose = "progress")
     })
 
     list(
