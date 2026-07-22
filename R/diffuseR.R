@@ -72,28 +72,93 @@ diffuseR_unload <- function() {
     }
     te <- .diffuseR_env$text_encoder
     if (is.null(te)) {
-        message("diffuseR backend: loading Gemma3 text encoder (CPU)...")
-        te_dir <- dirname(hfhub::hub_download("Lightricks/LTX-2",
-                "text_encoder/config.json", local_files_only = TRUE))
+        # Prefer the NF4 artifact: ~8 GB pinned CPU-resident (vs 45 GB
+        # fp32), and encode_with_gemma3 swaps it to the GPU per encode
+        # (~0.3 s on at DMA rate, pointer-swap off) for a ~7 s encode
+        # instead of ~24 s on the CPU
+        nf4_dir <- file.path(tools::R_user_dir("diffuseR", "data"),
+                             "gemma3-nf4")
         tok_dir <- dirname(hfhub::hub_download(
                 "Lightricks/LTX-2", "tokenizer/tokenizer.json",
                 local_files_only = TRUE
             ))
-        te <- list(
-                   model = diffuseR::load_gemma3_text_encoder(te_dir,
-                device = "cpu", dtype = "float32"),
-                   tokenizer = diffuseR::gemma3_tokenizer(tok_dir)
-        )
+        if (dir.exists(nf4_dir)) {
+            message("diffuseR backend: loading Gemma3 NF4 (pinned CPU)...")
+            model <- diffuseR::load_gemma3_text_encoder(nf4_dir,
+                device = "cpu",
+                verbose = getOption("xtx.diffuseR.verbose", FALSE))
+        } else {
+            message("diffuseR backend: loading Gemma3 text encoder (CPU)...")
+            te_dir <- dirname(hfhub::hub_download("Lightricks/LTX-2",
+                    "text_encoder/config.json", local_files_only = TRUE))
+            model <- diffuseR::load_gemma3_text_encoder(te_dir,
+                device = "cpu", dtype = "float32")
+        }
+        te <- list(model = model,
+                   tokenizer = diffuseR::gemma3_tokenizer(tok_dir))
         if (isTRUE(getOption("xtx.diffuseR.keep_text_encoder", TRUE))) {
             .diffuseR_env$text_encoder <- te
         }
     }
+    enc_dev <- if (!is.null(attr(te$model, "staging")) &&
+        torch::cuda_is_available()) {
+        "cuda"
+    } else {
+        "cpu"
+    }
     emb <- diffuseR::encode_with_gemma3(prompt, model = te$model,
                                         tokenizer = te$tokenizer,
                                         max_sequence_length = 1024L,
-                                        device = "cpu")
+                                        device = enc_dev)
+    emb$prompt_embeds <- emb$prompt_embeds$to(device = "cpu")
+    emb$prompt_attention_mask <- emb$prompt_attention_mask$to(device = "cpu")
     .diffuseR_env[[key]] <- emb
     emb
+}
+
+# Connector outputs are what the transformer actually consumes, they
+# are tiny (~9 MB vs ~0.4 GB for the raw hidden-state stack), and the
+# prompt is constant across a track's chunks: compute once on the CPU,
+# cache, and drop the raw embeds. Passing these as connector_embeds
+# also skips txt2vid's per-call connectors phase (diffuseR >= 0.1.0.15).
+.diffuseR_connector_embeds <- function(prompt) {
+    key <- paste0("conn:", prompt)
+    cemb <- .diffuseR_env[[key]]
+    if (!is.null(cemb)) {
+        return(cemb)
+    }
+    pipe <- .diffuseR_pipeline()
+    emb <- .diffuseR_prompt_embeds(prompt)
+    conn <- torch::with_no_grad(pipe$connectors(
+        emb$prompt_embeds$to(dtype = torch::torch_bfloat16()),
+        emb$prompt_attention_mask))
+    cemb <- list(video_text_embedding = conn$video_text_embedding,
+                 audio_text_embedding = conn$audio_text_embedding,
+                 attention_mask = conn$attention_mask)
+    .diffuseR_env[[key]] <- cemb
+    rm(list = paste0("embeds:", prompt), envir = .diffuseR_env)
+    cemb
+}
+
+# One-slot stash of the last delivered chunk's tail: the next
+# transition conditions on these lossless in-memory frames instead of
+# re-reading the H.264 file (which extracts every frame to PNG to get
+# nine). Keyed by output path; a resume after a crash misses the stash
+# and falls back to the file, so the per-chunk resume contract holds.
+.diffuseR_stash_tail <- function(res, output, n = 9L) {
+    v <- res$video
+    if (is.null(v)) {
+        return(invisible(NULL))
+    }
+    nf <- dim(v)[1]
+    if (nf < n) {
+        return(invisible(NULL))
+    }
+    .diffuseR_env$last_tail <- list(
+        path = normalizePath(output, mustWork = FALSE),
+        frames = v[(nf - n + 1L):nf, , , , drop = FALSE]
+    )
+    invisible(NULL)
 }
 
 #' stv() via diffuseR: start image + audio -> audio-driven talking head
@@ -111,14 +176,16 @@ diffuseR_unload <- function() {
     num_frames <- .align_8nplus1(round(dur * 24))
 
     pipe <- .diffuseR_pipeline()
-    emb <- .diffuseR_prompt_embeds(prompt)
-    diffuseR::txt2vid_ltx2(prompt = prompt, pipeline = pipe,
-                           prompt_embeds = emb, image = image, audio = audio,
+    cemb <- .diffuseR_connector_embeds(prompt)
+    res <- diffuseR::txt2vid_ltx2(prompt = prompt, pipeline = pipe,
+                           connector_embeds = cemb, image = image, audio = audio,
                            width = size, height = size,
                            num_frames = num_frames, frame_rate = 24,
                            seed = seed, device = "cuda", dtype = "bfloat16",
                            filename = output,
                            verbose = getOption("xtx.diffuseR.verbose", "progress"))
+    .diffuseR_stash_tail(res, output,
+        n = as.integer(getOption("xtx.transition.conditioning_frames", 9L)))
     invisible(output)
 }
 
@@ -156,17 +223,28 @@ diffuseR_unload <- function() {
     }
 
     pipe <- .diffuseR_pipeline()
-    emb <- .diffuseR_prompt_embeds(prompt)
+    cemb <- .diffuseR_connector_embeds(prompt)
 
     if (!is.null(start_clip)) {
-        # Continuation: match the source clip's geometry; total frames
-        # include the conditioning overlap (consumer trims/crossfades)
-        info <- suppressWarnings(system2("ffprobe",
-                shQuote(c("-v", "error", "-select_streams", "v:0",
-                          "-show_entries", "stream=width,height",
-                          "-of", "csv=p=0", start_clip)),
-                stdout = TRUE, stderr = FALSE))
-        dims <- as.integer(strsplit(info[1], ",")[[1]])
+        # In-memory fast path: when this call chains directly off the
+        # previous chunk, its tail is stashed as lossless frames -
+        # condition on those instead of re-reading the H.264 file.
+        # Falls back to the file (resume, or any non-chained caller).
+        stash <- .diffuseR_env$last_tail
+        cond_source <- start_clip
+        if (!is.null(stash) &&
+            identical(stash$path, normalizePath(start_clip, mustWork = FALSE)) &&
+            dim(stash$frames)[1] == conditioning_frames) {
+            cond_source <- stash$frames
+            dims <- c(dim(stash$frames)[3], dim(stash$frames)[2])
+        } else {
+            info <- suppressWarnings(system2("ffprobe",
+                    shQuote(c("-v", "error", "-select_streams", "v:0",
+                              "-show_entries", "stream=width,height",
+                              "-of", "csv=p=0", start_clip)),
+                    stdout = TRUE, stderr = FALSE))
+            dims <- as.integer(strsplit(info[1], ",")[[1]])
+        }
         total_frames <- .align_8nplus1(num_frames + conditioning_frames - 1L)
 
         # The overlap head replays the previous chunk; this chunk's
@@ -180,11 +258,11 @@ diffuseR_unload <- function() {
                            ncol = round((conditioning_frames - 1L) / fps * 16000))
             cond_audio <- cbind(lead, wav)
         }
-        diffuseR::txt2vid_ltx2(
+        res <- diffuseR::txt2vid_ltx2(
                                prompt = prompt,
                                pipeline = pipe,
-                               prompt_embeds = emb,
-                               condition_video = start_clip,
+                               connector_embeds = cemb,
+                               condition_video = cond_source,
                                conditioning_frames = as.integer(conditioning_frames),
                                audio = cond_audio,
                                width = dims[1], height = dims[2],
@@ -194,12 +272,13 @@ diffuseR_unload <- function() {
                                filename = output,
                                verbose = getOption("xtx.diffuseR.verbose", "progress")
         )
+        .diffuseR_stash_tail(res, output, n = as.integer(conditioning_frames))
     } else {
         size <- .diffuseR_size(resolution)
-        diffuseR::txt2vid_ltx2(
+        res <- diffuseR::txt2vid_ltx2(
                                prompt = prompt,
                                pipeline = pipe,
-                               prompt_embeds = emb,
+                               connector_embeds = cemb,
                                image = image_start,
                                audio = audio,
                                width = size, height = size,
@@ -209,6 +288,8 @@ diffuseR_unload <- function() {
                                filename = output,
                                verbose = getOption("xtx.diffuseR.verbose", "progress")
         )
+        .diffuseR_stash_tail(res, output,
+                             n = as.integer(conditioning_frames))
     }
     invisible(output)
 }
