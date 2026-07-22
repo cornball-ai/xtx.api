@@ -83,7 +83,7 @@ diffuseR_unload <- function() {
                 local_files_only = TRUE
             ))
         if (dir.exists(nf4_dir)) {
-            message("diffuseR backend: loading Gemma3 NF4 (pinned CPU)...")
+            message("diffuseR backend: loading Gemma3 NF4 (held in RAM, swaps to GPU on use)...")
             model <- diffuseR::load_gemma3_text_encoder(nf4_dir,
                 device = "cpu",
                 verbose = getOption("xtx.diffuseR.verbose", FALSE))
