@@ -1,3 +1,13 @@
+# xtx.api 0.1.0.5
+
+* diffuseR chain fast path: chained transitions condition on an
+  in-memory stash of the previous chunk's tail (lossless; no more
+  whole-mp4 PNG extraction per chunk), prompt memos hold the ~9 MB
+  connector outputs instead of ~0.4 GB raw Gemma3 stacks (passed as
+  connector_embeds, skipping txt2vid's per-call connectors phase),
+  and the text encoder prefers the pinned NF4 artifact (~0.3 s GPU
+  swap per encode). Requires diffuseR >= 0.1.0.15.
+
 # xtx.api 0.1.0.4
 
 * The diffuseR backend surfaces generation progress by default: the
