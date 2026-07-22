@@ -86,13 +86,17 @@ diffuseR_unload <- function() {
             message("diffuseR backend: loading Gemma3 NF4 (held in RAM, swaps to GPU on use)...")
             model <- diffuseR::load_gemma3_text_encoder(nf4_dir,
                 device = "cpu",
-                verbose = getOption("xtx.diffuseR.verbose", FALSE))
+                verbose = isTRUE(getOption("xtx.diffuseR.verbose", FALSE)))
         } else {
             message("diffuseR backend: loading Gemma3 text encoder (CPU)...")
             te_dir <- dirname(hfhub::hub_download("Lightricks/LTX-2",
                     "text_encoder/config.json", local_files_only = TRUE))
+            # pin = FALSE: the ~45 GB fp32 encoder is CPU-compute-only.
+            # Pinning it would page-lock 45 GB AND make the staging
+            # check below select CUDA, staging 45 GB onto the card.
             model <- diffuseR::load_gemma3_text_encoder(te_dir,
-                device = "cpu", dtype = "float32")
+                device = "cpu", dtype = "float32", pin = FALSE,
+                verbose = isTRUE(getOption("xtx.diffuseR.verbose", FALSE)))
         }
         te <- list(model = model,
                    tokenizer = diffuseR::gemma3_tokenizer(tok_dir))
