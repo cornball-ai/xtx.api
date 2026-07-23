@@ -83,12 +83,12 @@ diffuseR_unload <- function() {
                 local_files_only = TRUE
             ))
         if (dir.exists(nf4_dir)) {
-            message("diffuseR backend: loading Gemma3 NF4 (held in RAM, swaps to GPU on use)...")
+            message("diffuseR backend: loading the pipeline's Gemma3 text encoder (NF4, held in RAM, swaps to GPU on use)...")
             model <- diffuseR::load_gemma3_text_encoder(nf4_dir,
                 device = "cpu",
                 verbose = isTRUE(getOption("xtx.diffuseR.verbose", FALSE)))
         } else {
-            message("diffuseR backend: loading Gemma3 text encoder (CPU)...")
+            message("diffuseR backend: loading the pipeline's Gemma3 text encoder (fp32, CPU)...")
             te_dir <- dirname(hfhub::hub_download("Lightricks/LTX-2",
                     "text_encoder/config.json", local_files_only = TRUE))
             # pin = FALSE: the ~45 GB fp32 encoder is CPU-compute-only.
