@@ -1,3 +1,9 @@
+# xtx.api 0.1.0.6
+
+* Gemma3 fallback fixes: the fp32 path never pins (and never stages
+  to the GPU), verbose options are coerced to logical, hfhub is
+  declared, and the tail-stash semantics gained tests.
+
 # xtx.api 0.1.0.5
 
 * diffuseR chain fast path: chained transitions condition on an
