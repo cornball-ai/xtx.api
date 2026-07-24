@@ -63,7 +63,7 @@ Generate an image from a text prompt using multiple backends.
 \examples{
 \dontrun{
 # Using OpenAI DALL-E
-xtx_set_api_key("sk-...")
+set_api_key("sk-...")
 result <- tti("A white cat on a windowsill")
 browseURL(result$data[[1]]$url)
 

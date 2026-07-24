@@ -55,7 +55,7 @@ itv_base <- function(url) {
 
     status <- response$status_code
     if (status >= 400) {
-        err_msg <- .xtx_parse_error(response$content)
+        err_msg <- .parse_error(response$content)
         stop("ITV API error (", status, "): ", err_msg, call. = FALSE)
     }
 

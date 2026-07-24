@@ -5,7 +5,7 @@
 
 #' Check if diffuseR is available
 #' @keywords internal
-.xtx_has_diffuser <- function() {
+.has_diffuser <- function() {
     requireNamespace("diffuseR", quietly = TRUE)
 }
 
@@ -14,7 +14,7 @@
 #' @param devices Device configuration
 #' @return List with pipeline, model_name, devices
 #' @keywords internal
-.xtx_get_diffuser_pipeline <- function(model_name, devices) {
+.get_diffuser_pipeline <- function(model_name, devices) {
     # Create cache key from model and devices
     devices_str <- if (is.list(devices)) {
         paste(names(devices), unlist(devices), sep = "=", collapse = "_")

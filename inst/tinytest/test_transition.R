@@ -31,7 +31,7 @@ options(xtx.wan2gp_api_base = old_base)
 # No prompt passed: exercises the generic-default-prompt path (wgp.py rejects
 # empty prompts). Generates a real minimal clip, so needs the WanGP API up.
 if (at_home() && transition_available()) {
-  td <- tempfile("xtx_transition")
+  td <- tempfile("transition")
   dir.create(td)
   clip <- file.path(td, "src.mp4")
   end_png <- file.path(td, "end.png")

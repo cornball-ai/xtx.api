@@ -1,9 +1,9 @@
 % tinyrox says don't edit this manually, but it can't stop you!
-\name{xtx_health}
-\alias{xtx_health}
+\name{health}
+\alias{health}
 \title{Check API Health}
 \usage{
-xtx_health()
+health()
 }
 \value{
 A list with:
@@ -16,8 +16,8 @@ Check connectivity and authentication with the configured API endpoint.
 }
 \examples{
 \dontrun{
-xtx_set_api_key("sk-...")
-xtx_health()
+set_api_key("sk-...")
+health()
 }
 
 }

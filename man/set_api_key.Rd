@@ -1,9 +1,9 @@
 % tinyrox says don't edit this manually, but it can't stop you!
-\name{xtx_set_api_key}
-\alias{xtx_set_api_key}
+\name{set_api_key}
+\alias{set_api_key}
 \title{Set API Key}
 \usage{
-xtx_set_api_key(key)
+set_api_key(key)
 }
 \arguments{
 \item{key}{Character. The API key string.}
@@ -16,7 +16,7 @@ Configure the API key for authentication with image generation services.
 }
 \examples{
 \dontrun{
-xtx_set_api_key("sk-...")
+set_api_key("sk-...")
 }
 
 }

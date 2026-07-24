@@ -1,10 +1,10 @@
 % tinyrox says don't edit this manually, but it can't stop you!
-\name{xtx_img_variation}
-\alias{xtx_img_variation}
+\name{img_variation}
+\alias{img_variation}
 \title{Create Image Variations}
 \usage{
-xtx_img_variation(image, model = "dall-e-2", size = "1024x1024", n = 1,
-                  response_format = "url", file = NULL)
+img_variation(image, model = "dall-e-2", size = "1024x1024", n = 1,
+              response_format = "url", file = NULL)
 }
 \arguments{
 \item{image}{Character. Path to the input image file (PNG, max 4MB, square).}
@@ -28,8 +28,8 @@ Note: This function only works with the OpenAI backend.
 }
 \examples{
 \dontrun{
-xtx_set_api_key("sk-...")
-result <- xtx_img_variation("photo.png", n = 3)
+set_api_key("sk-...")
+result <- img_variation("photo.png", n = 3)
 }
 
 }

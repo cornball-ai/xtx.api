@@ -68,7 +68,7 @@ tti_base <- function(url) {
 #' @examples
 #' \dontrun{
 #' # Using OpenAI DALL-E
-#' xtx_set_api_key("sk-...")
+#' set_api_key("sk-...")
 #' result <- tti("A white cat on a windowsill")
 #' browseURL(result$data[[1]]$url)
 #'
@@ -113,7 +113,7 @@ tti <- function(prompt,
 
     # Auto backend selection
     if (backend == "auto") {
-        if (.xtx_has_diffuser()) {
+        if (.has_diffuser()) {
             backend <- "diffuseR"
             message("Using diffuseR backend")
         } else {
@@ -219,7 +219,7 @@ tti <- function(prompt,
 
     status <- response$status_code
     if (status >= 400) {
-        err_msg <- .xtx_parse_error(response$content)
+        err_msg <- .parse_error(response$content)
         stop("TTI API error (", status, "): ", err_msg, call. = FALSE)
     }
 
@@ -278,7 +278,7 @@ tti <- function(prompt,
         }
     }
 
-    result <- .xtx_post_json("/v1/images/generations", body)
+    result <- .post_json("/v1/images/generations", body)
 
     if (!is.null(result$parse_error)) {
         stop("Failed to parse API response: ", result$parse_error,
@@ -288,7 +288,7 @@ tti <- function(prompt,
     result$backend <- "openai"
 
     if (!is.null(file) && !is.null(result$data) && length(result$data) > 0) {
-        .xtx_save_image(result$data[[1]], file, response_format)
+        .save_image(result$data[[1]], file, response_format)
     }
 
     result
@@ -299,7 +299,7 @@ tti <- function(prompt,
 .tti_diffuser <- function(prompt, model = NULL, negative_prompt = NULL,
                           size = NULL, steps = 50, guidance_scale = 7.5,
                           seed = NULL, devices = "cpu", file = NULL) {
-    if (!.xtx_has_diffuser()) {
+    if (!.has_diffuser()) {
         stop(
              "diffuseR package is not installed.\n",
              "Install from local source or GitHub to use local diffusion models.",
@@ -329,7 +329,7 @@ tti <- function(prompt,
     }
 
     # Get cached pipeline (loads once, reuses thereafter)
-    p <- .xtx_get_diffuser_pipeline(diffuser_model, devices)
+    p <- .get_diffuser_pipeline(diffuser_model, devices)
 
     # Use model-specific function with cached pipeline
     # Wrap in no_grad to prevent gradient tracking during inference

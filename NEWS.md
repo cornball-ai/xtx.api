@@ -1,3 +1,13 @@
+# xtx.api 0.1.0.10
+
+* Drop the redundant `xtx_` prefix from exported functions (callers
+  qualify with `xtx.api::`): `xtx_img_edit` -> `img_edit`,
+  `xtx_img_variation` -> `img_variation`, `xtx_health` -> `health`,
+  `xtx_models` -> `models`, `xtx_backends` -> `backends`,
+  `xtx_supported_models` -> `supported_models`, `xtx_set_api_base` ->
+  `set_api_base`, `xtx_set_api_key` -> `set_api_key`. Internal helpers
+  and file names lost the prefix too. In-org callers updated together.
+
 # xtx.api 0.1.0.9
 
 * Sidecar `media` block: the audio branch now records sample rate and

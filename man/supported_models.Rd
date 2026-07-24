@@ -1,9 +1,9 @@
 % tinyrox says don't edit this manually, but it can't stop you!
-\name{xtx_supported_models}
-\alias{xtx_supported_models}
+\name{supported_models}
+\alias{supported_models}
 \title{Get Supported Image Models}
 \usage{
-xtx_supported_models(backend = NULL)
+supported_models(backend = NULL)
 }
 \arguments{
 \item{backend}{Character or NULL. Filter by backend: "openai", "diffuser", or NULL for all.}
@@ -15,7 +15,7 @@ A data frame with columns: model, backend, type, description.
 Returns information about known image generation models by backend.
 }
 \examples{
-xtx_supported_models()
-xtx_supported_models("diffuser")
+supported_models()
+supported_models("diffuser")
 
 }

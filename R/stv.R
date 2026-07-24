@@ -90,7 +90,7 @@ wan2gp_api_base <- function(url) {
 
     status <- response$status_code
     if (status >= 400) {
-        err_msg <- .xtx_parse_error(response$content)
+        err_msg <- .parse_error(response$content)
         stop("STV API error (", status, "): ", err_msg, call. = FALSE)
     }
 
@@ -420,7 +420,7 @@ stv_face_delete <- function(face_id) {
     )
 
     if (response$status_code >= 400) {
-        err_msg <- .xtx_parse_error(response$content)
+        err_msg <- .parse_error(response$content)
         stop("STV API error (", response$status_code, "): ", err_msg,
              call. = FALSE)
     }
