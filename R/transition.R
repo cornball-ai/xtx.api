@@ -147,6 +147,15 @@ transition <- function(start_clip = NULL, image_start = NULL,
 #' @keywords internal
 .align_8nplus1 <- function(n) max(9L, as.integer(8 * round((n - 1) / 8) + 1))
 
+#' Snap a frame count UP to LTX-2's 8n+1 grid
+#'
+#' For sizing generation from audio: the video must always cover the audio,
+#' so the frame budget rounds up. Nearest-rounding here shaved up to 4 frames
+#' off a chunk's speech and desynced whole chained tracks (the shortfall also
+#' contaminated the conditioning-head measurement downstream).
+#' @keywords internal
+.ceil_8nplus1 <- function(n) max(9L, as.integer(8 * ceiling((n - 1) / 8) + 1))
+
 #' WanGP API Transition Backend
 #' @keywords internal
 .transition_wan2gp_api <- function(start_clip = NULL, image_start = NULL,
