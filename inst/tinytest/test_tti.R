@@ -24,16 +24,16 @@ expect_error(tti(c("a", "b")), pattern = "non-empty character")
 # backend must be valid
 expect_error(tti("a cat", backend = "invalid"), pattern = "arg")
 
-# --- xtx_supported_models() ---
+# --- supported_models() ---
 
-models <- xtx_supported_models()
+models <- supported_models()
 expect_true(is.data.frame(models))
 expect_true("model" %in% names(models))
 expect_true("backend" %in% names(models))
 expect_true(nrow(models) > 0)
 
-# --- xtx_backends() ---
+# --- backends() ---
 
-backends <- xtx_backends()
+backends <- backends()
 expect_true(is.list(backends))
 expect_true("openai" %in% names(backends))
