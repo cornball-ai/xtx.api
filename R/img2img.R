@@ -44,10 +44,10 @@
 #'
 #' @export
 img_edit <- function(image, prompt, backend = c("openai", "diffuser"),
-                         model = NULL, mask = NULL, negative_prompt = NULL,
-                         size = "1024x1024", strength = 0.8, steps = 50,
-                         guidance_scale = 7.5, seed = NULL, devices = "cpu",
-                         n = 1, response_format = "url", file = NULL) {
+                     model = NULL, mask = NULL, negative_prompt = NULL,
+                     size = "1024x1024", strength = 0.8, steps = 50,
+                     guidance_scale = 7.5, seed = NULL, devices = "cpu",
+                     n = 1, response_format = "url", file = NULL) {
     .sidecar_arm(environment(), "file")
     # Validate inputs
     if (!file.exists(image)) {
@@ -61,20 +61,20 @@ img_edit <- function(image, prompt, backend = c("openai", "diffuser"),
 
     if (backend == "diffuser") {
         .img_edit_diffuser(image = image, prompt = prompt, model = model,
-                               negative_prompt = negative_prompt, size = size,
-                               strength = strength, steps = steps,
-                               guidance_scale = guidance_scale, seed = seed,
-                               devices = devices, file = file)
+                           negative_prompt = negative_prompt, size = size,
+                           strength = strength, steps = steps,
+                           guidance_scale = guidance_scale, seed = seed,
+                           devices = devices, file = file)
     } else {
         .img_edit_openai(
-                             image = image,
-                             prompt = prompt,
-                             model = model,
-                             mask = mask,
-                             size = size,
-                             n = n,
-                             response_format = response_format,
-                             file = file
+                         image = image,
+                         prompt = prompt,
+                         model = model,
+                         mask = mask,
+                         size = size,
+                         n = n,
+                         response_format = response_format,
+                         file = file
         )
     }
 }
@@ -82,8 +82,8 @@ img_edit <- function(image, prompt, backend = c("openai", "diffuser"),
 #' Image edit via OpenAI DALL-E
 #' @keywords internal
 .img_edit_openai <- function(image, prompt, model = NULL, mask = NULL,
-                                 size = "1024x1024", n = 1,
-                                 response_format = "url", file = NULL) {
+                             size = "1024x1024", n = 1,
+                             response_format = "url", file = NULL) {
     if (!is.null(mask) && !file.exists(mask)) {
         stop("Mask file not found: ", mask, call. = FALSE)
     }
@@ -126,10 +126,10 @@ img_edit <- function(image, prompt, backend = c("openai", "diffuser"),
 #' Image edit via diffuseR img2img
 #' @keywords internal
 .img_edit_diffuser <- function(image, prompt, model = NULL,
-                                   negative_prompt = NULL, size = "512x512",
-                                   strength = 0.8, steps = 50,
-                                   guidance_scale = 7.5, seed = NULL,
-                                   devices = "cpu", file = NULL) {
+                               negative_prompt = NULL, size = "512x512",
+                               strength = 0.8, steps = 50,
+                               guidance_scale = 7.5, seed = NULL,
+                               devices = "cpu", file = NULL) {
     if (!.has_diffuser()) {
         stop(
              "diffuseR package is not installed.\n",
@@ -213,7 +213,7 @@ img_edit <- function(image, prompt, backend = c("openai", "diffuser"),
 #'
 #' @export
 img_variation <- function(image, model = "dall-e-2", size = "1024x1024",
-                              n = 1, response_format = "url", file = NULL) {
+                          n = 1, response_format = "url", file = NULL) {
     .sidecar_arm(environment(), "file")
     if (!file.exists(image)) {
         stop("Image file not found: ", image, call. = FALSE)

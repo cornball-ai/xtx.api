@@ -5,13 +5,13 @@
 
 # Service configurations
 .gpu_services <- list(
-                          diffusers = list(port = 8000, vram = 14, container = "diffusers-api",
-        health = "/health"),
-                          sadtalker = list(
-        port = 10364,
-        vram = 12,
-        container = "sadtalker",
-        health = "/health"
+                      diffusers = list(port = 8000, vram = 14, container = "diffusers-api",
+                                       health = "/health"),
+                      sadtalker = list(
+                                       port = 10364,
+                                       vram = 12,
+                                       container = "sadtalker",
+                                       health = "/health"
     )
 )
 

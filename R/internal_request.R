@@ -32,8 +32,7 @@
 #' Make HTTP request
 #' @keywords internal
 .request <- function(endpoint, method = "GET", body = NULL,
-                         expect_binary = FALSE,
-                         content_type = "application/json") {
+                     expect_binary = FALSE, content_type = "application/json") {
     base <- .get_api_base()
     url <- paste0(base, endpoint)
 
@@ -98,7 +97,7 @@
 #' @keywords internal
 .post_json <- function(endpoint, body, expect_binary = FALSE) {
     .request(endpoint, method = "POST", body = body,
-                 expect_binary = expect_binary)
+             expect_binary = expect_binary)
 }
 
 #' GET request
