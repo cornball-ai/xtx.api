@@ -3,14 +3,8 @@
 \alias{rvf_interp}
 \title{Interpolate Between Two Images}
 \usage{
-rvf_interp(
-  img0,
-  img1,
-  output = NULL,
-  timestep = 0.5,
-  model = "rife-v4.6",
-  gpu = 0L
-)
+rvf_interp(img0, img1, output = NULL, timestep = 0.5, model = "rife-v4.6",
+           gpu = 0L)
 }
 \arguments{
 \item{img0}{Path to the first image}

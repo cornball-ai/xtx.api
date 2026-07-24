@@ -30,41 +30,40 @@
 #' }
 #'
 #' @export
-benchmark <- function(
-  expr,
-  times = 1L,
-  verbose = TRUE
-) {
-  times <- as.integer(times)
-  if (times < 1) times <- 1L
-
-  elapsed <- numeric(times)
-  result <- NULL
-
-  for (i in seq_len(times)) {
-    start <- Sys.time()
-    result <- eval(substitute(expr), parent.frame())
-    end <- Sys.time()
-    elapsed[i] <- as.numeric(difftime(end, start, units = "secs"))
-
-    if (verbose) {
-      message(sprintf("Run %d: %.2f seconds", i, elapsed[i]))
+benchmark <- function(expr, times = 1L, verbose = TRUE) {
+    times <- as.integer(times)
+    if (times < 1) {
+        times <- 1L
     }
-  }
 
-  mean_time <- mean(elapsed)
-  total_time <- sum(elapsed)
+    elapsed <- numeric(times)
+    result <- NULL
 
-  if (verbose && times > 1) {
-    message(sprintf("Mean: %.2f seconds (total: %.2f seconds)", mean_time, total_time))
-  }
+    for (i in seq_len(times)) {
+        start <- Sys.time()
+        result <- eval(substitute(expr), parent.frame())
+        end <- Sys.time()
+        elapsed[i] <- as.numeric(difftime(end, start, units = "secs"))
 
-  list(
-    result = result,
-    elapsed = elapsed,
-    mean = mean_time,
-    total = total_time
-  )
+        if (verbose) {
+            message(sprintf("Run %d: %.2f seconds", i, elapsed[i]))
+        }
+    }
+
+    mean_time <- mean(elapsed)
+    total_time <- sum(elapsed)
+
+    if (verbose && times > 1) {
+        message(sprintf("Mean: %.2f seconds (total: %.2f seconds)", mean_time,
+                        total_time))
+    }
+
+    list(
+         result = result,
+         elapsed = elapsed,
+         mean = mean_time,
+         total = total_time
+    )
 }
 
 #' Compare Multiple Backends
@@ -86,47 +85,38 @@ benchmark <- function(
 #' }
 #'
 #' @export
-compare_backends <- function(
-  prompt,
-  backends = NULL,
-  ...
-) {
-  if (is.null(backends)) {
-    backends <- c("openai", "diffuser", "diffusers_api")
-  }
+compare_backends <- function(prompt, backends = NULL, ...) {
+    if (is.null(backends)) {
+        backends <- c("openai", "diffuser", "diffusers_api")
+    }
 
-  results <- data.frame(
-    backend = character(),
-    elapsed = numeric(),
-    status = character(),
-    stringsAsFactors = FALSE
-  )
+    results <- data.frame(backend = character(), elapsed = numeric(),
+                          status = character(), stringsAsFactors = FALSE)
 
-  for (backend in backends) {
-    message("Testing backend: ", backend)
+    for (backend in backends) {
+        message("Testing backend: ", backend)
 
-    status <- "ok"
-    elapsed <- NA_real_
+        status <- "ok"
+        elapsed <- NA_real_
 
-    tryCatch({
-        start <- Sys.time()
-        tti(prompt, backend = backend, ...)
-        end <- Sys.time()
-        elapsed <- as.numeric(difftime(end, start, units = "secs"))
-      }, error = function(e) {
-        status <<- paste("error:", e$message)
-      })
+        tryCatch({
+            start <- Sys.time()
+            tti(prompt, backend = backend, ...)
+            end <- Sys.time()
+            elapsed <- as.numeric(difftime(end, start, units = "secs"))
+        }, error = function(e) {
+            status <<- paste("error:", e$message)
+        })
 
-    results <- rbind(results, data.frame(
-        backend = backend,
-        elapsed = elapsed,
-        status = status,
-        stringsAsFactors = FALSE
-      ))
-  }
+        results <- rbind(results, data.frame(
+                backend = backend,
+                elapsed = elapsed,
+                status = status,
+                stringsAsFactors = FALSE
+            ))
+    }
 
-  message("\nResults:")
-  print(results)
-  invisible(results)
+    message("\nResults:")
+    print(results)
+    invisible(results)
 }
-

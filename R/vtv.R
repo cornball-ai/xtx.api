@@ -30,45 +30,26 @@
 #'       model = "ltx2", output = "enhanced.mp4")
 #' }
 #' @export
-vtv <- function(
-  video,
-  prompt = "",
-  output = "vtv_output.mp4",
-  backend = "wan2gp",
-  model = c("vace", "ltx2"),
-  width = 832L,
-  height = 832L,
-  num_frames = NULL,
-  num_steps = NULL,
-  guidance_scale = NULL,
-  strength = 0.5,
-  seed = NULL,
-  timeout = 600
-) {
+vtv <- function(video, prompt = "", output = "vtv_output.mp4",
+                backend = "wan2gp", model = c("vace", "ltx2"), width = 832L,
+                height = 832L, num_frames = NULL, num_steps = NULL,
+                guidance_scale = NULL, strength = 0.5, seed = NULL,
+                timeout = 600) {
+    .sidecar_arm(environment())
+    model <- match.arg(model)
 
-  model <- match.arg(model)
+    if (!file.exists(video)) {
+        stop("Video file not found: ", video, call. = FALSE)
+    }
 
-  if (!file.exists(video)) {
-    stop("Video file not found: ", video, call. = FALSE)
-  }
+    # Default num_frames from source video if not specified
+    if (is.null(num_frames)) {
+        num_frames <- 129L # Default, could probe video
+    }
 
-  # Default num_frames from source video if not specified
-  if (is.null(num_frames)) {
-    num_frames <- 129L# Default, could probe video
-  }
-
-  .wan2gp_generate(
-    prompt = prompt,
-    model = model,
-    video = video,
-    output = output,
-    width = width,
-    height = height,
-    num_frames = num_frames,
-    steps = num_steps,
-    guidance_scale = guidance_scale,
-    seed = seed,
-    timeout = timeout
-  )
+    .wan2gp_generate(prompt = prompt, model = model, video = video,
+                     output = output, width = width, height = height,
+                     num_frames = num_frames, steps = num_steps,
+                     guidance_scale = guidance_scale, seed = seed,
+                     timeout = timeout)
 }
-

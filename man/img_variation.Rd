@@ -1,0 +1,35 @@
+% tinyrox says don't edit this manually, but it can't stop you!
+\name{img_variation}
+\alias{img_variation}
+\title{Create Image Variations}
+\usage{
+img_variation(image, model = "dall-e-2", size = "1024x1024", n = 1,
+              response_format = "url", file = NULL)
+}
+\arguments{
+\item{image}{Character. Path to the input image file (PNG, max 4MB, square).}
+
+\item{model}{Character. The model to use. Currently only "dall-e-2" supported.}
+
+\item{size}{Character. Output size: "256x256", "512x512", or "1024x1024".}
+
+\item{n}{Integer. Number of variations to generate (1-10).}
+
+\item{response_format}{Character. "url" or "b64_json".}
+
+\item{file}{Character or NULL. If provided, save the first result to this path.}
+}
+\value{
+A list containing the generated image data.
+}
+\description{
+Generate variations of an existing image using DALL-E 2.
+Note: This function only works with the OpenAI backend.
+}
+\examples{
+\dontrun{
+set_api_key("sk-...")
+result <- img_variation("photo.png", n = 3)
+}
+
+}

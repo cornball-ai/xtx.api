@@ -34,55 +34,39 @@
 #'       width = 1280, height = 720, num_frames = 129)
 #' }
 #' @export
-ttv <- function(
-  prompt,
-  output = "ttv_output.mp4",
-  backend = c("wan2gp_api", "wan2gp"),
-  model = "ltx2",
-  num_frames = 97L,
-  resolution = "720p",
-  quality = "balanced",
+ttv <- function(prompt, output = "ttv_output.mp4",
+                backend = c("wan2gp_api", "wan2gp"), model = "ltx2",
+                num_frames = 97L, resolution = "720p", quality = "balanced",
+                width = 832L, height = 832L, num_steps = NULL,
+                guidance_scale = NULL, seed = NULL, timeout = 600) {
+    .sidecar_arm(environment())
+    if (missing(prompt) || nchar(prompt) == 0) {
+        stop("'prompt' is required for text-to-video generation", call. = FALSE)
+    }
 
-  width = 832L,
-  height = 832L,
-  num_steps = NULL,
-  guidance_scale = NULL,
-  seed = NULL,
-  timeout = 600
-) {
+    backend <- match.arg(backend)
 
-  if (missing(prompt) || nchar(prompt) == 0) {
-    stop("'prompt' is required for text-to-video generation", call. = FALSE)
-  }
-
-  backend <- match.arg(backend)
-
-  if (backend == "wan2gp_api") {
-    # WanGP FastAPI backend (LTX-2 via HTTP)
-    .t2v_wan2gp_api(
-      prompt = prompt,
-      output = output,
-      num_frames = num_frames,
-      resolution = resolution,
-      quality = quality,
-      timeout = timeout
-    )
-  } else {
-    # WanGP Docker backend
-    .wan2gp_generate(
-      prompt = prompt,
-      model = model,
-      image = NULL,
-      audio = NULL,
-      video = NULL,
-      output = output,
-      width = width,
-      height = height,
-      num_frames = num_frames,
-      steps = num_steps,
-      guidance_scale = guidance_scale,
-      seed = seed,
-      timeout = timeout
-    )
-  }
+    if (backend == "wan2gp_api") {
+        # WanGP FastAPI backend (LTX-2 via HTTP)
+        .t2v_wan2gp_api(prompt = prompt, output = output,
+                        num_frames = num_frames, resolution = resolution,
+                        quality = quality, timeout = timeout)
+    } else {
+        # WanGP Docker backend
+        .wan2gp_generate(
+                         prompt = prompt,
+                         model = model,
+                         image = NULL,
+                         audio = NULL,
+                         video = NULL,
+                         output = output,
+                         width = width,
+                         height = height,
+                         num_frames = num_frames,
+                         steps = num_steps,
+                         guidance_scale = guidance_scale,
+                         seed = seed,
+                         timeout = timeout
+        )
+    }
 }

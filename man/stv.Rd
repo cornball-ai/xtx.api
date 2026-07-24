@@ -3,26 +3,14 @@
 \alias{stv}
 \title{Generate Talking Head Video (Speech-to-Video)}
 \usage{
-stv(
-  image = NULL,
-  audio,
-  output = "stv_output.mp4",
-  backend = c("sadtalker", "wan2gp", "wan2gp_api", "fal"),
-  model = NULL,
-  face_id = NULL,
-  enhance = FALSE,
-  prompt = "Person speaking naturally",
-  resolution = "720p",
-  quality = "balanced",
-  width = 832L,
-  height = 832L,
-  num_frames = 129L,
-  num_inference_steps = 30L,
-  turbo_mode = TRUE,
-  seed = NULL,
-  device = "cuda",
-  timeout = 600
-)
+stv(image = NULL, audio, output = "stv_output.mp4",
+    backend = c("sadtalker", "wan2gp", "wan2gp_api", "diffuseR"), model = NULL,
+    face_id = NULL, enhance = FALSE, prompt = "Person speaking naturally",
+    resolution = "720p", quality = "balanced", width = 832L, height = 832L,
+    num_frames = 129L, num_inference_steps = 30L, turbo_mode = TRUE,
+    seed = NULL, device = "cuda", timeout = 600, sliding_window_size = NULL,
+    sliding_window_overlap = NULL, sliding_window_overlap_noise = NULL,
+    sliding_window_discard_last_frames = NULL)
 }
 \arguments{
 \item{image}{Path to portrait image (PNG/JPG, front-facing) or base64 string}
@@ -32,16 +20,16 @@ stv(
 \item{output}{Path for output video file (default: "stv_output.mp4")}
 
 \item{backend}{Backend to use: "sadtalker" (default), "wan2gp" (Docker),
-"wan2gp_api" (HTTP API), or "fal" (cloud)}
+or "wan2gp_api" (HTTP API)}
 
 \item{model}{Model for wan2gp backend: "hunyuan" (real faces), "fantasy" (stylized),
-or "ltx2" (general). For fal: "fal-ai/sadtalker" (default). Ignored for sadtalker.}
+or "ltx2" (general). Ignored for sadtalker.}
 
 \item{face_id}{Cached face ID for sadtalker (use instead of image for faster generation)}
 
 \item{enhance}{Apply GFPGAN face enhancement (sadtalker only)}
 
-\item{prompt}{Text prompt describing the scene (wan2gp and fal hunyuan-avatar)}
+\item{prompt}{Text prompt describing the scene (wan2gp)}
 
 \item{resolution}{Resolution for wan2gp_api: "480p" or "720p" (default: "720p")}
 
@@ -51,24 +39,40 @@ or "ltx2" (general). For fal: "fal-ai/sadtalker" (default). Ignored for sadtalke
 
 \item{height}{Video height (wan2gp Docker only, default: 832)}
 
-\item{num_frames}{Number of frames (wan2gp and fal hunyuan-avatar, default: 129)}
+\item{num_frames}{Number of frames (wan2gp, default: 129)}
 
-\item{num_inference_steps}{Number of inference steps (fal hunyuan-avatar, default: 30)}
+\item{num_inference_steps}{Number of inference steps (unused; reserved)}
 
-\item{turbo_mode}{Use turbo mode for faster generation (fal hunyuan-avatar, default: TRUE)}
+\item{turbo_mode}{Use turbo mode for faster generation (unused; reserved)}
 
 \item{seed}{Random seed (wan2gp only)}
 
 \item{device}{Device to use: "cuda" or "cpu" (sadtalker only)}
 
 \item{timeout}{Request timeout in seconds (default: 600)}
+
+\item{sliding_window_size}{LTX-2 sliding-window size in frames
+(wan2gp_api only). Default 129 = ~5.4s at 24fps, LTX-2's native context.
+Must be 8n+1. `NULL` (default) defers to the server's configured default.}
+
+\item{sliding_window_overlap}{Frames reused as motion conditioning between
+adjacent sliding windows (wan2gp_api only). Higher = smoother joins, more
+frames generated overall. `NULL` (default) defers to the server.}
+
+\item{sliding_window_overlap_noise}{Noise injected into the overlap region,
+0-100 (wan2gp_api only). Lower = stricter continuity, can flicker if too
+strict. `NULL` (default) defers to the server.}
+
+\item{sliding_window_discard_last_frames}{Frames trimmed off the end of each
+window before joining (wan2gp_api only). `NULL` (default) defers to the
+server.}
 }
 \value{
 Invisibly returns the output file path
 }
 \description{
 Generate an audio-driven talking head video from a portrait image and audio.
-Supports multiple backends: SadTalker (default), WanGP Docker, WanGP API, or fal.ai.
+Supports multiple backends: SadTalker (default), WanGP Docker, or WanGP API.
 }
 \examples{
 \dontrun{
@@ -82,9 +86,5 @@ Supports multiple backends: SadTalker (default), WanGP Docker, WanGP API, or fal
   wan2gp_api_base("http://gpu-server:8000")
   stv("portrait.jpg", "speech.wav", backend = "wan2gp_api",
       prompt = "Person speaking into microphone")
-
-  # Hunyuan Avatar via fal.ai (cloud API)
-  stv("portrait.jpg", "speech.wav", backend = "fal",
-      model = "fal-ai/hunyuan-avatar", prompt = "A person speaking")
 }
 }

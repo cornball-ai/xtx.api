@@ -58,48 +58,33 @@
 #' }
 #'
 #' @export
-ip_adapter <- function(
-  prompt,
-  reference_image,
-  ip_adapter_type = c("faceid", "faceid-plus", "face", "plus", "standard"),
-  model = "stabilityai/stable-diffusion-xl-base-1.0",
-  ip_adapter_scale = 0.6,
-  negative_prompt = "lowres, bad anatomy, worst quality, low quality",
-  steps = 30,
-  guidance_scale = 7.5,
-  width = 1024,
-  height = 1024,
-  file = NULL,
-  timeout = 300
-) {
+ip_adapter <- function(prompt, reference_image,
+                       ip_adapter_type = c("faceid", "faceid-plus", "face", "plus", "standard"),
+                       model = "stabilityai/stable-diffusion-xl-base-1.0",
+                       ip_adapter_scale = 0.6,
+                       negative_prompt = "lowres, bad anatomy, worst quality, low quality",
+                       steps = 30, guidance_scale = 7.5, width = 1024,
+                       height = 1024, file = NULL, timeout = 300) {
+    .sidecar_arm(environment(), "file")
+    if (!is.character(prompt) || length(prompt) != 1 || nchar(prompt) == 0) {
+        stop("'prompt' must be a non-empty character string", call. = FALSE)
+    }
 
-  if (!is.character(prompt) || length(prompt) != 1 || nchar(prompt) == 0) {
-    stop("'prompt' must be a non-empty character string", call. = FALSE)
-  }
+    ip_adapter_type <- match.arg(ip_adapter_type)
 
-  ip_adapter_type <- match.arg(ip_adapter_type)
+    # Acquire GPU if gpuctl integration is enabled
+    .gpuctl_acquire("diffusers")
 
-  # Acquire GPU if gpuctl integration is enabled
-  .gpuctl_acquire("diffusers")
+    # Convert reference image to base64
+    ref_b64 <- .image_to_base64(reference_image)
 
-  # Convert reference image to base64
-  ref_b64 <- .image_to_base64(reference_image)
-
-  # Make API request
-  .ip_adapter_api(
-    prompt = prompt,
-    reference_image = ref_b64,
-    ip_adapter_type = ip_adapter_type,
-    model = model,
-    ip_adapter_scale = ip_adapter_scale,
-    negative_prompt = negative_prompt,
-    steps = steps,
-    guidance_scale = guidance_scale,
-    width = width,
-    height = height,
-    file = file,
-    timeout = timeout
-  )
+    # Make API request
+    .ip_adapter_api(prompt = prompt, reference_image = ref_b64,
+                    ip_adapter_type = ip_adapter_type, model = model,
+                    ip_adapter_scale = ip_adapter_scale,
+                    negative_prompt = negative_prompt, steps = steps,
+                    guidance_scale = guidance_scale, width = width,
+                    height = height, file = file, timeout = timeout)
 }
 
 #' List Available IP-Adapter Types
@@ -116,102 +101,88 @@ ip_adapter <- function(
 #'
 #' @export
 ip_adapter_types <- function() {
-  base <- .tti_get_base()
-  url <- paste0(base, "/ip-adapter/types")
+    base <- .tti_get_base()
+    url <- paste0(base, "/ip-adapter/types")
 
-  h <- curl::new_handle()
-  curl::handle_setopt(h, timeout = 30)
+    h <- curl::new_handle()
+    curl::handle_setopt(h, timeout = 30)
 
-  response <- tryCatch(
-    curl::curl_fetch_memory(url, handle = h),
-    error = function(e) stop("Connection failed: ", e$message, call. = FALSE)
-  )
+    response <- tryCatch(
+                         curl::curl_fetch_memory(url, handle = h),
+                         error = function(e) stop("Connection failed: ", e$message,
+            call. = FALSE)
+    )
 
-  if (response$status_code != 200) {
-    stop("Failed to get IP-Adapter types: ", rawToChar(response$content), call. = FALSE)
-  }
+    if (response$status_code != 200) {
+        stop("Failed to get IP-Adapter types: ", rawToChar(response$content), call. = FALSE)
+    }
 
-  jsonlite::fromJSON(rawToChar(response$content), simplifyVector = FALSE)
+    jsonlite::fromJSON(rawToChar(response$content), simplifyVector = FALSE)
 }
 
 #' @keywords internal
 .image_to_base64 <- function(image) {
-  # If already base64 (no file extension, long string), return as-is
+    # If already base64 (no file extension, long string), return as-is
 
-  if (is.character(image) && nchar(image) > 500 && !grepl("\\.[a-zA-Z]+$", image)) {
-    return(image)
-  }
+    if (is.character(image) && nchar(image) > 500 &&
+        !grepl("\\.[a-zA-Z]+$", image)) {
+        return(image)
+    }
 
-  # Otherwise, read file and convert
-  if (!file.exists(image)) {
-    stop("Reference image file not found: ", image, call. = FALSE)
-  }
+    # Otherwise, read file and convert
+    if (!file.exists(image)) {
+        stop("Reference image file not found: ", image, call. = FALSE)
+    }
 
-  raw_data <- readBin(image, "raw", file.info(image)$size)
-  base64enc::base64encode(raw_data)
+    raw_data <- readBin(image, "raw", file.info(image)$size)
+    base64enc::base64encode(raw_data)
 }
 
 #' @keywords internal
-.ip_adapter_api <- function(
-  prompt,
-  reference_image,
-  ip_adapter_type,
-  model,
-  ip_adapter_scale,
-  negative_prompt,
-  steps,
-  guidance_scale,
-  width,
-  height,
-  file,
-  timeout
-) {
+.ip_adapter_api <- function(prompt, reference_image, ip_adapter_type, model,
+                            ip_adapter_scale, negative_prompt, steps,
+                            guidance_scale, width, height, file, timeout) {
+    base <- .tti_get_base()
+    url <- paste0(base, "/ip-adapter")
 
-  base <- .tti_get_base()
-  url <- paste0(base, "/ip-adapter")
+    body <- list(model_id = model, prompt = prompt,
+                 negative_prompt = negative_prompt,
+                 reference_image = reference_image,
+                 ip_adapter_type = ip_adapter_type,
+                 ip_adapter_scale = ip_adapter_scale,
+                 num_inference_steps = as.integer(steps),
+                 guidance_scale = guidance_scale, width = as.integer(width),
+                 height = as.integer(height))
 
-  body <- list(
-    model_id = model,
-    prompt = prompt,
-    negative_prompt = negative_prompt,
-    reference_image = reference_image,
-    ip_adapter_type = ip_adapter_type,
-    ip_adapter_scale = ip_adapter_scale,
-    num_inference_steps = as.integer(steps),
-    guidance_scale = guidance_scale,
-    width = as.integer(width),
-    height = as.integer(height)
-  )
+    h <- curl::new_handle()
+    curl::handle_setopt(h, timeout = timeout, post = TRUE,
+                        postfields = jsonlite::toJSON(body, auto_unbox = TRUE))
+    curl::handle_setheaders(h, "Content-Type" = "application/json")
 
-  h <- curl::new_handle()
-  curl::handle_setopt(h, timeout = timeout, post = TRUE,
-    postfields = jsonlite::toJSON(body, auto_unbox = TRUE))
-  curl::handle_setheaders(h, "Content-Type" = "application/json")
+    response <- tryCatch(
+                         curl::curl_fetch_memory(url, handle = h),
+                         error = function(e) stop("Connection failed: ", e$message, call. = FALSE)
+    )
 
-  response <- tryCatch(
-    curl::curl_fetch_memory(url, handle = h),
-    error = function(e) stop("Connection failed: ", e$message, call. = FALSE)
-  )
+    if (response$status_code != 200) {
+        err_msg <- tryCatch({
+            err <- jsonlite::fromJSON(rawToChar(response$content))
+            if (!is.null(err$detail)) err$detail else rawToChar(response$content)
+        }, error = function(e) rawToChar(response$content))
+        stop("IP-Adapter generation failed: ", err_msg, call. = FALSE)
+    }
 
-  if (response$status_code != 200) {
-    err_msg <- tryCatch({
-        err <- jsonlite::fromJSON(rawToChar(response$content))
-        if (!is.null(err$detail)) err$detail else rawToChar(response$content)
-      }, error = function(e) rawToChar(response$content))
-    stop("IP-Adapter generation failed: ", err_msg, call. = FALSE)
-  }
+    result <- jsonlite::fromJSON(rawToChar(response$content), simplifyVector = FALSE)
 
-  result <- jsonlite::fromJSON(rawToChar(response$content), simplifyVector = FALSE)
+    # Save to file if requested
+    if (!is.null(file)) {
+        img_raw <- base64enc::base64decode(result$image)
+        writeBin(img_raw, file)
+        message("Image saved to: ", file)
+        return(invisible(file))
+    }
 
-  # Save to file if requested
-  if (!is.null(file)) {
-    img_raw <- base64enc::base64decode(result$image)
-    writeBin(img_raw, file)
-    message("Image saved to: ", file)
-    return(invisible(file))
-  }
-
-  result
+    result
 }
 
 #' IP-Adapter for Face Consistency (Convenience Function)
@@ -247,21 +218,10 @@ ip_adapter_types <- function() {
 #' }
 #'
 #' @export
-ip_adapter_face <- function(
-  prompt,
-  face_image,
-  file,
-  scale = 0.6,
-  ...
-) {
-  ip_adapter(
-    prompt = prompt,
-    reference_image = face_image,
-    ip_adapter_type = "faceid",
-    ip_adapter_scale = scale,
-    file = file,
-    ...
-  )
+ip_adapter_face <- function(prompt, face_image, file, scale = 0.6, ...) {
+    ip_adapter(prompt = prompt, reference_image = face_image,
+               ip_adapter_type = "faceid", ip_adapter_scale = scale,
+               file = file, ...)
 }
 
 #' IP-Adapter for Style Transfer (Convenience Function)
@@ -286,20 +246,8 @@ ip_adapter_face <- function(
 #' }
 #'
 #' @export
-ip_adapter_style <- function(
-  prompt,
-  style_image,
-  file,
-  scale = 0.8,
-  ...
-) {
-  ip_adapter(
-    prompt = prompt,
-    reference_image = style_image,
-    ip_adapter_type = "plus",
-    ip_adapter_scale = scale,
-    file = file,
-    ...
-  )
+ip_adapter_style <- function(prompt, style_image, file, scale = 0.8, ...) {
+    ip_adapter(prompt = prompt, reference_image = style_image,
+               ip_adapter_type = "plus", ip_adapter_scale = scale,
+               file = file, ...)
 }
-
