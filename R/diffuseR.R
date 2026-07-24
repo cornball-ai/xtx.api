@@ -134,8 +134,8 @@ diffuseR_unload <- function() {
     pipe <- .diffuseR_pipeline()
     emb <- .diffuseR_prompt_embeds(prompt)
     conn <- torch::with_no_grad(pipe$connectors(
-        emb$prompt_embeds$to(dtype = torch::torch_bfloat16()),
-        emb$prompt_attention_mask))
+            emb$prompt_embeds$to(dtype = torch::torch_bfloat16()),
+            emb$prompt_attention_mask))
     cemb <- list(video_text_embedding = conn$video_text_embedding,
                  audio_text_embedding = conn$audio_text_embedding,
                  attention_mask = conn$attention_mask)
@@ -159,8 +159,8 @@ diffuseR_unload <- function() {
         return(invisible(NULL))
     }
     .diffuseR_env$last_tail <- list(
-        path = normalizePath(output, mustWork = FALSE),
-        frames = v[(nf - n + 1L):nf, , , , drop = FALSE]
+                                    path = normalizePath(output, mustWork = FALSE),
+                                    frames = v[(nf - n + 1L):nf,,,, drop = FALSE]
     )
     invisible(NULL)
 }
@@ -182,14 +182,14 @@ diffuseR_unload <- function() {
     pipe <- .diffuseR_pipeline()
     cemb <- .diffuseR_connector_embeds(prompt)
     res <- diffuseR::txt2vid_ltx2(prompt = prompt, pipeline = pipe,
-                           connector_embeds = cemb, image = image, audio = audio,
-                           width = size, height = size,
-                           num_frames = num_frames, frame_rate = 24,
-                           seed = seed, device = "cuda", dtype = "bfloat16",
-                           filename = output,
-                           verbose = getOption("xtx.diffuseR.verbose", "progress"))
+                                  connector_embeds = cemb, image = image, audio = audio,
+                                  width = size, height = size,
+                                  num_frames = num_frames, frame_rate = 24,
+                                  seed = seed, device = "cuda", dtype = "bfloat16",
+                                  filename = output,
+                                  verbose = getOption("xtx.diffuseR.verbose", "progress"))
     .diffuseR_stash_tail(res, output,
-        n = as.integer(getOption("xtx.transition.conditioning_frames", 9L)))
+                         n = as.integer(getOption("xtx.transition.conditioning_frames", 9L)))
     invisible(output)
 }
 
@@ -263,37 +263,36 @@ diffuseR_unload <- function() {
             cond_audio <- cbind(lead, wav)
         }
         res <- diffuseR::txt2vid_ltx2(
-                               prompt = prompt,
-                               pipeline = pipe,
-                               connector_embeds = cemb,
-                               condition_video = cond_source,
-                               conditioning_frames = as.integer(conditioning_frames),
-                               audio = cond_audio,
-                               width = dims[1], height = dims[2],
-                               num_frames = total_frames, frame_rate = fps,
-                               seed = seed,
-                               device = "cuda", dtype = "bfloat16",
-                               filename = output,
-                               verbose = getOption("xtx.diffuseR.verbose", "progress")
+                                      prompt = prompt,
+                                      pipeline = pipe,
+                                      connector_embeds = cemb,
+                                      condition_video = cond_source,
+                                      conditioning_frames = as.integer(conditioning_frames),
+                                      audio = cond_audio,
+                                      width = dims[1], height = dims[2],
+                                      num_frames = total_frames, frame_rate = fps,
+                                      seed = seed,
+                                      device = "cuda", dtype = "bfloat16",
+                                      filename = output,
+                                      verbose = getOption("xtx.diffuseR.verbose", "progress")
         )
         .diffuseR_stash_tail(res, output, n = as.integer(conditioning_frames))
     } else {
         size <- .diffuseR_size(resolution)
         res <- diffuseR::txt2vid_ltx2(
-                               prompt = prompt,
-                               pipeline = pipe,
-                               connector_embeds = cemb,
-                               image = image_start,
-                               audio = audio,
-                               width = size, height = size,
-                               num_frames = num_frames, frame_rate = fps,
-                               seed = seed,
-                               device = "cuda", dtype = "bfloat16",
-                               filename = output,
-                               verbose = getOption("xtx.diffuseR.verbose", "progress")
+                                      prompt = prompt,
+                                      pipeline = pipe,
+                                      connector_embeds = cemb,
+                                      image = image_start,
+                                      audio = audio,
+                                      width = size, height = size,
+                                      num_frames = num_frames, frame_rate = fps,
+                                      seed = seed,
+                                      device = "cuda", dtype = "bfloat16",
+                                      filename = output,
+                                      verbose = getOption("xtx.diffuseR.verbose", "progress")
         )
-        .diffuseR_stash_tail(res, output,
-                             n = as.integer(conditioning_frames))
+        .diffuseR_stash_tail(res, output, n = as.integer(conditioning_frames))
     }
     invisible(output)
 }
