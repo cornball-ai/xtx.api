@@ -87,7 +87,14 @@
                     video = .probe_video(output, ext),
                     image = .probe_image(output, ext),
                     audio = .probe_audio(output, ext)), silent = TRUE)
-    if (inherits(m, "try-error")) NULL else m
+    # `format` is the extension, known without probing; a block carrying only
+    # that measured nothing (unreadable/missing file) -- emit no media block.
+    if (inherits(m, "try-error") || is.null(m) ||
+        length(setdiff(names(m), "format")) == 0) {
+        NULL
+    } else {
+        m
+    }
 }
 
 .ffprobe_json <- function(args) {
@@ -129,10 +136,23 @@
 }
 
 .probe_audio <- function(output, ext) {
-    j <- .ffprobe_json(c("-show_entries", "format=duration", output))
-    .drop_empty(list(format = ext,
-                     duration = suppressWarnings(round(
-                         as.numeric(j$format$duration), 3))))
+    j <- .ffprobe_json(c("-show_entries",
+                         "stream=sample_rate,channels:format=duration",
+                         "-select_streams", "a:0", output))
+    dur <- suppressWarnings(round(as.numeric(j$format$duration), 3))
+    s <- j$streams
+    sr <- if (!is.null(s) && nrow(s) > 0) {
+        suppressWarnings(as.integer(s$sample_rate[1]))
+    } else {
+        NULL
+    }
+    ch <- if (!is.null(s) && nrow(s) > 0) {
+        suppressWarnings(as.integer(s$channels[1]))
+    } else {
+        NULL
+    }
+    .drop_empty(list(format = ext, duration = dur, sample_rate = sr,
+                     channels = ch))
 }
 
 .drop_empty <- function(m) {

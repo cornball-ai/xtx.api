@@ -98,3 +98,21 @@ if (nzchar(Sys.which("ffprobe")) && nzchar(Sys.which("ffmpeg"))) {
 # Unknown extension and missing file yield no media block, never an error.
 expect_null(xtx.api:::.sidecar_media(tempfile(fileext = ".xyz")))
 expect_null(xtx.api:::.sidecar_media(tempfile(fileext = ".mp4")))
+
+# --- parity with tts.api: enriched audio probe + measured-nothing guard ------
+
+if (nzchar(Sys.which("ffprobe")) && nzchar(Sys.which("ffmpeg"))) {
+    a2 <- tempfile(fileext = ".wav")
+    system2("ffmpeg", shQuote(c("-nostdin", "-y", "-f", "lavfi", "-i",
+                                "sine=frequency=440:duration=1", "-ar", "24000",
+                                "-ac", "1", a2)), stdout = FALSE, stderr = FALSE)
+    ma2 <- xtx.api:::.sidecar_media(a2)
+    expect_equal(ma2$sample_rate, 24000L)
+    expect_equal(ma2$channels, 1L)
+    unlink(a2)
+}
+# A missing known-extension file measured nothing: no media block (not a bare
+# format). Never reached in production (the file always exists), but the
+# contract is "a block only when we measured something."
+expect_null(xtx.api:::.sidecar_media(tempfile(fileext = ".mp3")))
+expect_null(xtx.api:::.sidecar_media(tempfile(fileext = ".wav")))
