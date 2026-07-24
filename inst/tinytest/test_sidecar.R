@@ -55,3 +55,46 @@ expect_true(file.exists(paste0(res, ".json")))
 rec2 <- jsonlite::fromJSON(paste0(res, ".json"))
 expect_equal(rec2$request$image, "in.png")
 unlink(c(res, paste0(res, ".json")))
+
+# --- .sidecar_media: delivered facts by kind --------------------------------
+
+if (nzchar(Sys.which("ffprobe")) && nzchar(Sys.which("ffmpeg"))) {
+    # Video: `frames` is the DECODED count. A 25-frame clip whose mp4 header
+    # over-reports by one must still record 25 (this is the whole point).
+    v <- tempfile(fileext = ".mp4")
+    system2("ffmpeg", shQuote(c("-nostdin", "-y", "-f", "lavfi", "-i",
+                                "testsrc2=size=64x64:rate=24", "-frames:v", "25",
+                                "-pix_fmt", "yuv420p", v)),
+            stdout = FALSE, stderr = FALSE)
+    mv <- xtx.api:::.sidecar_media(v)
+    expect_equal(mv$frames, 25L)
+    expect_equal(mv$width, 64L)
+    expect_equal(mv$height, 64L)
+    expect_equal(mv$fps, 24)
+    unlink(v)
+
+    # Audio: duration only.
+    a <- tempfile(fileext = ".wav")
+    system2("ffmpeg", shQuote(c("-nostdin", "-y", "-f", "lavfi", "-i",
+                                "sine=frequency=440:duration=1", "-ar", "16000",
+                                a)), stdout = FALSE, stderr = FALSE)
+    ma <- xtx.api:::.sidecar_media(a)
+    expect_true(abs(ma$duration - 1) < 0.05)
+    expect_null(ma$frames)
+    unlink(a)
+
+    # Image: dimensions only, no duration.
+    p <- tempfile(fileext = ".png")
+    system2("ffmpeg", shQuote(c("-nostdin", "-y", "-f", "lavfi", "-i",
+                                "color=c=red:s=48x32", "-frames:v", "1", p)),
+            stdout = FALSE, stderr = FALSE)
+    mp <- xtx.api:::.sidecar_media(p)
+    expect_equal(mp$width, 48L)
+    expect_equal(mp$height, 32L)
+    expect_null(mp$duration)
+    unlink(p)
+}
+
+# Unknown extension and missing file yield no media block, never an error.
+expect_null(xtx.api:::.sidecar_media(tempfile(fileext = ".xyz")))
+expect_null(xtx.api:::.sidecar_media(tempfile(fileext = ".mp4")))

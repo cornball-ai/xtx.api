@@ -1,3 +1,14 @@
+# xtx.api 0.1.0.8
+
+* Sidecars record a `media` block of delivered facts probed from the
+  produced file: for video the DECODED frame count (`-count_frames`,
+  since container headers can be off by one), fps, dimensions, and
+  duration; dimensions for images; duration for audio. The request is
+  intent; the media block is what actually landed. Probe failure or a
+  missing ffprobe drops the block and never breaks a write. Also guards
+  `fn` against `do.call()` callers that spliced the closure source into
+  the record. Consumed by `cornductor::recorded_frames()`.
+
 # xtx.api 0.1.0.7
 
 * diffuseR audio sizing rounds the frame budget UP to the 8n+1 grid
