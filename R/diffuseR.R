@@ -177,7 +177,7 @@ diffuseR_unload <- function() {
     if (is.na(dur)) {
         stop("Could not probe audio duration: ", audio, call. = FALSE)
     }
-    num_frames <- .align_8nplus1(round(dur * 24))
+    num_frames <- .ceil_8nplus1(round(dur * 24))
 
     pipe <- .diffuseR_pipeline()
     cemb <- .diffuseR_connector_embeds(prompt)
@@ -218,7 +218,7 @@ diffuseR_unload <- function() {
     if (is.null(num_frames) && !is.null(audio)) {
         adur <- .probe_duration(audio)
         if (!is.na(adur)) {
-            num_frames <- .align_8nplus1(round(adur * fps))
+            num_frames <- .ceil_8nplus1(round(adur * fps))
         }
     }
     if (is.null(num_frames)) {

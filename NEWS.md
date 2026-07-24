@@ -1,3 +1,9 @@
+# xtx.api 0.1.0.7
+
+* diffuseR audio sizing rounds the frame budget UP to the 8n+1 grid
+  (`.ceil_8nplus1`); nearest-snap could leave a chunk's video up to 4
+  frames short of its narration and desync chained tracks.
+
 # xtx.api 0.1.0.6
 
 * Gemma3 fallback fixes: the fp32 path never pins (and never stages
