@@ -47,3 +47,21 @@ if (at_home() && transition_available()) {
   }
   unlink(td, recursive = TRUE)
 }
+
+# --- 8n+1 grid helpers -------------------------------------------------------
+
+# Nearest-snap (grid math where the value is already near the grid).
+expect_equal(xtx.api:::.align_8nplus1(89L), 89L)
+expect_equal(xtx.api:::.align_8nplus1(85L), 81L)
+
+# Audio sizing must round UP: the video always covers the audio. 85 audio
+# frames snapped to 81 shaved real speech and desynced chained tracks
+# (USA/20260725 t01, chunks sized 4 frames short of their narration).
+expect_equal(xtx.api:::.ceil_8nplus1(85L), 89L)
+expect_equal(xtx.api:::.ceil_8nplus1(69L), 73L)
+expect_equal(xtx.api:::.ceil_8nplus1(73L), 73L) # on-grid stays put
+expect_equal(xtx.api:::.ceil_8nplus1(1L), 9L)   # floor at one step
+for (n in c(9L, 45L, 74L, 85L, 118L)) {
+  expect_true(xtx.api:::.ceil_8nplus1(n) >= n)
+  expect_true((xtx.api:::.ceil_8nplus1(n) - 1L) %% 8L == 0L)
+}

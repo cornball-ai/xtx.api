@@ -1,6 +1,6 @@
 Package: xtx.api
 Title: Cross-Modal Generative Interfaces
-Version: 0.1.0.4
+Version: 0.1.0.8
 Authors@R:
     person("Troy", "Hernandez", email = "troy@cornball.ai", role = c("aut", "cre"))
 Description:
@@ -19,7 +19,8 @@ Imports:
     curl,
     jsonlite
 Suggests:
-    diffuseR,
+    hfhub,
+    diffuseR (>= 0.1.0.15),
     gpu.ctl,
     rife,
     tinytest,
