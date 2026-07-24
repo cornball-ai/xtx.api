@@ -1,3 +1,10 @@
+# xtx.api 0.1.0.9
+
+* Sidecar `media` block: the audio branch now records sample rate and
+  channels (was duration-only), and a block that measured nothing (a
+  bare `format` for an unreadable file) is dropped rather than emitted.
+  Keeps the `.sidecar_media` helper identical to tts.api's.
+
 # xtx.api 0.1.0.8
 
 * Sidecars record a `media` block of delivered facts probed from the
