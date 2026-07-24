@@ -4,7 +4,7 @@
 # Enable with: options(xtx.gpuctl = TRUE)
 
 # Service configurations
-.xtx_gpu_services <- list(
+.gpu_services <- list(
                           diffusers = list(port = 8000, vram = 14, container = "diffusers-api",
         health = "/health"),
                           sadtalker = list(
@@ -29,8 +29,8 @@
         return(invisible(FALSE))
     }
 
-    for (name in names(.xtx_gpu_services)) {
-        svc <- .xtx_gpu_services[[name]]
+    for (name in names(.gpu_services)) {
+        svc <- .gpu_services[[name]]
         tryCatch({
             # Only register if not already registered
             existing <- gpu.ctl::gpu_services()

@@ -1,9 +1,9 @@
 % tinyrox says don't edit this manually, but it can't stop you!
-\name{.xtx_get_diffuser_pipeline}
-\alias{.xtx_get_diffuser_pipeline}
+\name{.get_diffuser_pipeline}
+\alias{.get_diffuser_pipeline}
 \title{Get or create cached diffuseR pipeline}
 \usage{
-.xtx_get_diffuser_pipeline(model_name, devices)
+.get_diffuser_pipeline(model_name, devices)
 }
 \arguments{
 \item{model_name}{Model name ("sd21" or "sdxl")}

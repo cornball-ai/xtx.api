@@ -8,11 +8,11 @@
 #'
 #' @examples
 #' \dontrun{
-#' xtx_set_api_key("sk-...")
+#' set_api_key("sk-...")
 #' }
 #'
 #' @export
-xtx_set_api_key <- function(key) {
+set_api_key <- function(key) {
     if (!is.character(key) || length(key) != 1 || nchar(key) == 0) {
         stop("'key' must be a non-empty character string", call. = FALSE)
     }

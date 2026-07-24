@@ -1,9 +1,9 @@
 % tinyrox says don't edit this manually, but it can't stop you!
-\name{xtx_set_api_base}
-\alias{xtx_set_api_base}
+\name{set_api_base}
+\alias{set_api_base}
 \title{Set API Base URL}
 \usage{
-xtx_set_api_base(url)
+set_api_base(url)
 }
 \arguments{
 \item{url}{Character. The base URL (without trailing slash).}
@@ -18,10 +18,10 @@ Defaults to OpenAI's API endpoint.
 \examples{
 \dontrun{
 # Use OpenAI
-xtx_set_api_base("https://api.openai.com")
+set_api_base("https://api.openai.com")
 
 # Use a local server
-xtx_set_api_base("http://localhost:8000")
+set_api_base("http://localhost:8000")
 }
 
 }

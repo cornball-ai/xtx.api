@@ -1,9 +1,9 @@
 % tinyrox says don't edit this manually, but it can't stop you!
-\name{xtx_backends}
-\alias{xtx_backends}
+\name{backends}
+\alias{backends}
 \title{Check Available Backends}
 \usage{
-xtx_backends()
+backends()
 }
 \value{
 A list with backend availability status.
@@ -12,6 +12,6 @@ A list with backend availability status.
 Check which backends are currently available and configured.
 }
 \examples{
-xtx_backends()
+backends()
 
 }

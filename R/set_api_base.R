@@ -10,14 +10,14 @@
 #' @examples
 #' \dontrun{
 #' # Use OpenAI
-#' xtx_set_api_base("https://api.openai.com")
+#' set_api_base("https://api.openai.com")
 #'
 #' # Use a local server
-#' xtx_set_api_base("http://localhost:8000")
+#' set_api_base("http://localhost:8000")
 #' }
 #'
 #' @export
-xtx_set_api_base <- function(url) {
+set_api_base <- function(url) {
     if (!is.character(url) || length(url) != 1 || nchar(url) == 0) {
         stop("'url' must be a non-empty character string", call. = FALSE)
     }

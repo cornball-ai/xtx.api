@@ -6,13 +6,13 @@
 #'
 #' @examples
 #' \dontrun{
-#' xtx_set_api_key("sk-...")
-#' xtx_models()
+#' set_api_key("sk-...")
+#' models()
 #' }
 #'
 #' @export
-xtx_models <- function() {
-    result <- tryCatch(.xtx_get("/v1/models"), error = function(e) NULL)
+models <- function() {
+    result <- tryCatch(.get("/v1/models"), error = function(e) NULL)
 
     if (is.null(result)) {
         message("Could not retrieve models from API")
@@ -45,11 +45,11 @@ xtx_models <- function() {
 #' @return A data frame with columns: model, backend, type, description.
 #'
 #' @examples
-#' xtx_supported_models()
-#' xtx_supported_models("diffuser")
+#' supported_models()
+#' supported_models("diffuser")
 #'
 #' @export
-xtx_supported_models <- function(backend = NULL) {
+supported_models <- function(backend = NULL) {
     models <- data.frame(
                          model = c(
                                    # OpenAI
@@ -86,18 +86,18 @@ xtx_supported_models <- function(backend = NULL) {
 #' @return A list with backend availability status.
 #'
 #' @examples
-#' xtx_backends()
+#' backends()
 #'
 #' @export
-xtx_backends <- function() {
+backends <- function() {
     list(
          openai = list(available = TRUE,
                        configured = !is.null(getOption("xtx.api_key")),
                        api_base = getOption("xtx.api_base")),
          diffuser = list(
-                         available = .xtx_has_diffuser(),
-                         configured = .xtx_has_diffuser(),
-                         models = if (.xtx_has_diffuser()) c("sd21", "sdxl") else NULL
+                         available = .has_diffuser(),
+                         configured = .has_diffuser(),
+                         models = if (.has_diffuser()) c("sd21", "sdxl") else NULL
         )
     )
 }

@@ -9,13 +9,13 @@
 #'
 #' @examples
 #' \dontrun{
-#' xtx_set_api_key("sk-...")
-#' xtx_health()
+#' set_api_key("sk-...")
+#' health()
 #' }
 #'
 #' @export
-xtx_health <- function() {
-    base <- tryCatch(.xtx_get_api_base(), error = function(e) NULL)
+health <- function() {
+    base <- tryCatch(.get_api_base(), error = function(e) NULL)
 
     if (is.null(base)) {
         return(list(ok = FALSE, status = "API base URL not configured",
@@ -24,7 +24,7 @@ xtx_health <- function() {
 
     # Try to list models as a health check
     result <- tryCatch({
-        models <- .xtx_get("/v1/models")
+        models <- .get("/v1/models")
         list(
              ok = TRUE,
              status = paste0("Connected to ", base),

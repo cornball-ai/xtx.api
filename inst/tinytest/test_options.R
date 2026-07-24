@@ -14,12 +14,12 @@ on.exit({
   options(xtx.itv_base = old_itv)
 }, add = TRUE)
 
-# Test xtx_set_api_base
-xtx_set_api_base("http://localhost:8000")
+# Test set_api_base
+set_api_base("http://localhost:8000")
 expect_equal(getOption("xtx.api_base"), "http://localhost:8000")
 
-# Test xtx_set_api_key
-xtx_set_api_key("test-key-123")
+# Test set_api_key
+set_api_key("test-key-123")
 expect_equal(getOption("xtx.api_key"), "test-key-123")
 
 # Test tti_base

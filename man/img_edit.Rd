@@ -1,12 +1,12 @@
 % tinyrox says don't edit this manually, but it can't stop you!
-\name{xtx_img_edit}
-\alias{xtx_img_edit}
+\name{img_edit}
+\alias{img_edit}
 \title{Edit Image with Text Prompt}
 \usage{
-xtx_img_edit(image, prompt, backend = c("openai", "diffuser"), model = NULL,
-             mask = NULL, negative_prompt = NULL, size = "1024x1024",
-             strength = 0.8, steps = 50, guidance_scale = 7.5, seed = NULL,
-             devices = "cpu", n = 1, response_format = "url", file = NULL)
+img_edit(image, prompt, backend = c("openai", "diffuser"), model = NULL,
+         mask = NULL, negative_prompt = NULL, size = "1024x1024",
+         strength = 0.8, steps = 50, guidance_scale = 7.5, seed = NULL,
+         devices = "cpu", n = 1, response_format = "url", file = NULL)
 }
 \arguments{
 \item{image}{Character. Path to the input image file.}
@@ -52,14 +52,14 @@ for OpenAI backend, or diffuseR img2img for local models.
 \examples{
 \dontrun{
 # OpenAI edit with mask
-result <- xtx_img_edit(
+result <- img_edit(
   image = "photo.png",
   prompt = "Add a red hat",
   mask = "mask.png"
 )
 
 # diffuseR img2img
-result <- xtx_img_edit(
+result <- img_edit(
   image = "photo.png",
   prompt = "Make it look like a painting",
   backend = "diffuser",
