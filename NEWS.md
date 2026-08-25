@@ -1,3 +1,14 @@
+# xtx.api 0.1.0.11
+
+* `itv(backend = "wan2gp_api")` and `ttv(backend = "wan2gp_api")` no longer
+  abort a slow-but-healthy generation: `.i2v_wan2gp_api()`/`.t2v_wan2gp_api()`
+  now disable curl's low-speed-abort (`low_speed_time = 0, low_speed_limit
+  = 0`), matching the fix already applied to the `/avatar` (stv) and
+  transition WanGP calls in this same file. Previously a long `quality`
+  mode generation (~10min+) could die to curl's default low-speed abort
+  regardless of the caller's own `timeout=`, since that parameter only
+  sets `CURLOPT_TIMEOUT`, a different mechanism.
+
 # xtx.api 0.1.0.10
 
 * Drop the redundant `xtx_` prefix from exported functions (callers
