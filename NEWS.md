@@ -1,3 +1,20 @@
+# xtx.api 0.1.0.12
+
+* **`gpuhost_release(hold_s)` / `gpuhost_resume()`:** ask the gpuhost to
+  deactivate its resident entry NOW and refuse activating anything for
+  the stated window, so a caller can use the same card without racing
+  the host's idle timer. The case it exists for is a stage that
+  generates images on the host and then loads a video model in this
+  process on the same board: the idle release fires only after a lull,
+  so the two overlap by whatever the timer has left, and the failure is
+  a CUDA OOM well into the stage.
+
+  `hold_s` has no default. Exclusive use of a shared card is a decision,
+  and no default can make it. The host bounds it at 3600 s -- a stage
+  longer than that re-arms per unit of work, which is also what lets a
+  crashed caller's hold expire instead of yielding the fleet's card
+  forever. Requires gpu.ctl >= 0.1.0.23 on the host.
+
 # xtx.api 0.1.0.11
 
 * **New `tti(backend = "gpuhost")`:** generation on the vientito-managed

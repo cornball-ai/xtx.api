@@ -112,6 +112,76 @@
          })
 }
 
+# POST {base}/v1/device -- the handoff wire. Separate from `.gpuhost_infer`
+# rather than folded into it: this one has no entry, no request key and no
+# dedup, and its reply is JSON rather than image bytes. The only thing the
+# two share is the base and the credential.
+.gpuhost_device <- function(op, hold_s = NULL, timeout = 60) {
+    body <- c(list(v = "gpu-host/1", op = op),
+              if (!is.null(hold_s)) list(hold_s = as.numeric(hold_s)))
+    h <- curl::new_handle(timeout = timeout, post = TRUE,
+                          postfields = jsonlite::toJSON(body,
+                                                        auto_unbox = TRUE))
+    curl::handle_setheaders(h,
+                            "Content-Type" = "application/json",
+                            Authorization = paste("Bearer", .gpuhost_bearer()))
+    r <- curl::curl_fetch_memory(paste0(.gpuhost_base(), "/v1/device"), h)
+    txt <- rawToChar(r$content)
+    if (r$status_code != 200L) {
+        stop("gpuhost refused the device ", op, " (", r$status_code, "): ",
+             substr(txt, 1, 300), call. = FALSE)
+    }
+    out <- jsonlite::fromJSON(txt, simplifyVector = TRUE)
+    invisible(out$value)
+}
+
+#' Hand the GPU back to the caller, for a stated window
+#'
+#' Asks the gpuhost to deactivate its resident entry NOW and to refuse
+#' activating anything for \code{hold_s} seconds, so the caller can use
+#' the same card without racing the host's idle timer.
+#'
+#' The case it exists for: a stage that generates images on the host and
+#' then loads a video model in this process, on the same board. The host's
+#' idle release fires only after a lull, so the two overlap by whatever the
+#' timer has left -- and the failure is a CUDA OOM well into the stage.
+#'
+#' The window is BOUNDED (the host refuses more than 3600 s) so a caller
+#' that dies does not leave the fleet's card yielded forever. A stage
+#' longer than the hold calls this again per unit of work; re-arming
+#' extends it, and that is also what lets a crash recover on its own.
+#'
+#' Refused on a co-resident catalog, where holding the card together is
+#' what the declaration means.
+#'
+#' @param hold_s Seconds to keep the device yielded. Required: exclusive
+#'   use of a shared card is a decision, and no default can make it.
+#' @return Invisibly the host's report: whether anything was actually
+#'   released, which entry, and the granted hold.
+#' @export
+gpuhost_release <- function(hold_s) {
+    if (!is.numeric(hold_s) || length(hold_s) != 1L || is.na(hold_s) ||
+        hold_s <= 0) {
+        stop("hold_s must be a positive number of seconds", call. = FALSE)
+    }
+    .gpuhost_device("release", hold_s = hold_s)
+}
+
+#' Give the GPU back to the gpuhost before the hold expires
+#'
+#' The other half of \code{\link{gpuhost_release}}. Not required -- the
+#' hold expires on its own, which is the property that makes a crashed
+#' caller recoverable -- but a stage that finished early should say so
+#' rather than leaving the host idle for the rest of the window.
+#'
+#' @return Invisibly the host's report, including whether a hold was
+#'   actually in force. Resuming a host that was not yielded is not an
+#'   error, and the answer distinguishes the two.
+#' @export
+gpuhost_resume <- function() {
+    .gpuhost_device("resume")
+}
+
 #' Probe the gpuhost service before a batch starts
 #'
 #' GET /health against the configured base, and -- when \code{entries} is
