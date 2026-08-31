@@ -1,3 +1,32 @@
+# xtx.api 0.1.0.11
+
+* **New `tti(backend = "gpuhost")`:** generation on the vientito-managed
+  gpu.ctl service instead of in the caller's process. The `diffuseR`
+  backends load a pipeline into this R session and generate on the local
+  card, which is fine on a machine nobody else is using and wrong on a
+  fleet node -- gpu.ctl's host holds the same card for its resident
+  catalog, so two independent CUDA processes compete for one device.
+  Measured on troy-ai: the host held 8.37 GiB of a 15.47 GiB board and the
+  in-process FLUX.2 died allocating 20 MiB, mid-countdown. Configure with
+  `options(xtx.gpuhost_base = "http://host:7878")`; the entry name is the
+  endpoint's property (`xtx.gpuhost_image_entry`, default
+  `flux2-klein-4b`), because the fleet runs more than one catalog.
+
+* `gpuhost_health()` probes the service and, given `entries`, checks that
+  the host's catalog actually carries them. "ok" alone says the front is
+  serving and nothing about the catalog behind it.
+
+* `steps` reaches the gpuhost only when the caller ASKED for it. `tti()`
+  defaults it to 50, which is the SD family's number; FLUX.2 klein is a
+  4-step distilled model, so sending the default would be twelve times the
+  work for no gain and would look like the caller's choice.
+
+* A `negative_prompt` on the gpuhost backend is reported, not swallowed.
+  FLUX.2 klein is guidance-distilled -- no CFG for one to attach to, and
+  `diffuseR::txt2img_flux2()` has no such argument -- so the in-process
+  path drops it in silence, which is how a caller keeps passing something
+  inert for months.
+
 # xtx.api 0.1.0.10
 
 * Drop the redundant `xtx_` prefix from exported functions (callers
