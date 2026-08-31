@@ -3,10 +3,21 @@
 \alias{vtv}
 \title{Generate Video from Video (Video-to-Video)}
 \usage{
-vtv(video, prompt = "", output = "vtv_output.mp4", backend = "wan2gp",
-    model = c("vace", "ltx2"), width = 832L, height = 832L, num_frames = NULL,
-    num_steps = NULL, guidance_scale = NULL, strength = 0.5, seed = NULL,
-    timeout = 600)
+vtv(
+  video,
+  prompt = "",
+  output = "vtv_output.mp4",
+  backend = "wan2gp",
+  model = c("vace", "ltx2"),
+  width = 832L,
+  height = 832L,
+  num_frames = NULL,
+  num_steps = NULL,
+  guidance_scale = NULL,
+  strength = 0.5,
+  seed = NULL,
+  timeout = 600
+)
 }
 \arguments{
 \item{video}{Path to source video file}

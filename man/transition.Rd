@@ -3,15 +3,30 @@
 \alias{transition}
 \title{Generate a Bridging / Transition Clip (Video-to-Video)}
 \usage{
-transition(start_clip = NULL, image_start = NULL, end_image = NULL,
-           keyframe_images = NULL, keyframe_positions = NULL, prompt = NULL,
-           audio = NULL, num_frames = NULL, conditioning_frames = NULL,
-           fill_window = FALSE, sliding_window_size = NULL,
-           sliding_window_overlap = NULL, sliding_window_overlap_noise = NULL,
-           sliding_window_discard_last_frames = NULL, fps = 24, window = 129,
-           resolution = "720p", quality = "balanced", seed = NULL,
-           output = "transition_output.mp4", timeout = 1800,
-           backend = c("wan2gp_api", "diffuseR"))
+transition(
+  start_clip = NULL,
+  image_start = NULL,
+  end_image = NULL,
+  keyframe_images = NULL,
+  keyframe_positions = NULL,
+  prompt = NULL,
+  audio = NULL,
+  num_frames = NULL,
+  conditioning_frames = NULL,
+  fill_window = FALSE,
+  sliding_window_size = NULL,
+  sliding_window_overlap = NULL,
+  sliding_window_overlap_noise = NULL,
+  sliding_window_discard_last_frames = NULL,
+  fps = 24,
+  window = 129,
+  resolution = "720p",
+  quality = "balanced",
+  seed = NULL,
+  output = "transition_output.mp4",
+  timeout = 1800,
+  backend = c("wan2gp_api", "diffuseR")
+)
 }
 \arguments{
 \item{start_clip}{Path to the source video (MP4). Its trailing frames seed

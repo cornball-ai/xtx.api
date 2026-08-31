@@ -3,14 +3,30 @@
 \alias{stv}
 \title{Generate Talking Head Video (Speech-to-Video)}
 \usage{
-stv(image = NULL, audio, output = "stv_output.mp4",
-    backend = c("sadtalker", "wan2gp", "wan2gp_api", "diffuseR"), model = NULL,
-    face_id = NULL, enhance = FALSE, prompt = "Person speaking naturally",
-    resolution = "720p", quality = "balanced", width = 832L, height = 832L,
-    num_frames = 129L, num_inference_steps = 30L, turbo_mode = TRUE,
-    seed = NULL, device = "cuda", timeout = 600, sliding_window_size = NULL,
-    sliding_window_overlap = NULL, sliding_window_overlap_noise = NULL,
-    sliding_window_discard_last_frames = NULL)
+stv(
+  image = NULL,
+  audio,
+  output = "stv_output.mp4",
+  backend = c("sadtalker", "wan2gp", "wan2gp_api", "diffuseR"),
+  model = NULL,
+  face_id = NULL,
+  enhance = FALSE,
+  prompt = "Person speaking naturally",
+  resolution = "720p",
+  quality = "balanced",
+  width = 832L,
+  height = 832L,
+  num_frames = 129L,
+  num_inference_steps = 30L,
+  turbo_mode = TRUE,
+  seed = NULL,
+  device = "cuda",
+  timeout = 600,
+  sliding_window_size = NULL,
+  sliding_window_overlap = NULL,
+  sliding_window_overlap_noise = NULL,
+  sliding_window_discard_last_frames = NULL
+)
 }
 \arguments{
 \item{image}{Path to portrait image (PNG/JPG, front-facing) or base64 string}

@@ -3,10 +3,21 @@
 \alias{ttv}
 \title{Generate Video from Text (Text-to-Video)}
 \usage{
-ttv(prompt, output = "ttv_output.mp4", backend = c("wan2gp_api", "wan2gp"),
-    model = "ltx2", num_frames = 97L, resolution = "720p",
-    quality = "balanced", width = 832L, height = 832L, num_steps = NULL,
-    guidance_scale = NULL, seed = NULL, timeout = 600)
+ttv(
+  prompt,
+  output = "ttv_output.mp4",
+  backend = c("wan2gp_api", "wan2gp"),
+  model = "ltx2",
+  num_frames = 97L,
+  resolution = "720p",
+  quality = "balanced",
+  width = 832L,
+  height = 832L,
+  num_steps = NULL,
+  guidance_scale = NULL,
+  seed = NULL,
+  timeout = 600
+)
 }
 \arguments{
 \item{prompt}{Text prompt describing the video content}

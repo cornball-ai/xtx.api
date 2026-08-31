@@ -3,13 +3,20 @@
 \alias{ip_adapter}
 \title{Generate Image with IP-Adapter}
 \usage{
-ip_adapter(prompt, reference_image,
-           ip_adapter_type = c("faceid", "faceid-plus", "face", "plus", "standard"),
-           model = "stabilityai/stable-diffusion-xl-base-1.0",
-           ip_adapter_scale = 0.6,
-           negative_prompt = "lowres, bad anatomy, worst quality, low quality",
-           steps = 30, guidance_scale = 7.5, width = 1024, height = 1024,
-           file = NULL, timeout = 300)
+ip_adapter(
+  prompt,
+  reference_image,
+  ip_adapter_type = c("faceid", "faceid-plus", "face", "plus", "standard"),
+  model = "stabilityai/stable-diffusion-xl-base-1.0",
+  ip_adapter_scale = 0.6,
+  negative_prompt = "lowres, bad anatomy, worst quality, low quality",
+  steps = 30,
+  guidance_scale = 7.5,
+  width = 1024,
+  height = 1024,
+  file = NULL,
+  timeout = 300
+)
 }
 \arguments{
 \item{prompt}{Character. The text description of the image to generate.}

@@ -3,8 +3,13 @@
 \alias{.request}
 \title{Make HTTP request}
 \usage{
-.request(endpoint, method = "GET", body = NULL, expect_binary = FALSE,
-         content_type = "application/json")
+.request(
+  endpoint,
+  method = "GET",
+  body = NULL,
+  expect_binary = FALSE,
+  content_type = "application/json"
+)
 }
 \description{
 Make HTTP request

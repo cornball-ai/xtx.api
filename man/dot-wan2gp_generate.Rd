@@ -3,10 +3,21 @@
 \alias{.wan2gp_generate}
 \title{Internal WanGP Video Generation}
 \usage{
-.wan2gp_generate(prompt, model = "ltx2", image = NULL, audio = NULL,
-                 video = NULL, output = NULL, width = 832L, height = 832L,
-                 num_frames = 129L, steps = NULL, guidance_scale = NULL,
-                 seed = NULL, timeout = 600)
+.wan2gp_generate(
+  prompt,
+  model = "ltx2",
+  image = NULL,
+  audio = NULL,
+  video = NULL,
+  output = NULL,
+  width = 832L,
+  height = 832L,
+  num_frames = 129L,
+  steps = NULL,
+  guidance_scale = NULL,
+  seed = NULL,
+  timeout = 600
+)
 }
 \arguments{
 \item{prompt}{Text prompt}

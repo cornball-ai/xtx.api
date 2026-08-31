@@ -3,8 +3,16 @@
 \alias{rvf_morph}
 \title{Create Morph Video Between Two Images}
 \usage{
-rvf_morph(start, end, output = "morph.mp4", frames = 60L, duration = NULL,
-          fps = 30, model = "rife-v4.6", gpu = 0L)
+rvf_morph(
+  start,
+  end,
+  output = "morph.mp4",
+  frames = 60L,
+  duration = NULL,
+  fps = 30,
+  model = "rife-v4.6",
+  gpu = 0L
+)
 }
 \arguments{
 \item{start}{Path to the starting image}
