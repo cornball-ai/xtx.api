@@ -24,10 +24,21 @@ NULL
 #' the system. Call it after a batch run -- the docker-stop
 #' equivalent. The next diffuseR call reloads from disk.
 #'
+#' It also drops \code{tti()}/\code{img2img()}'s diffuseR pipelines
+#' (FLUX.2, SDXL, SD2.1), which live in a separate cache. Those cost
+#' little VRAM -- the FLUX family phase-swaps from host RAM -- but
+#' they pin large host staging buffers, and so do LTX and Gemma3. A
+#' session that generates images and then video holds both sets at
+#' once: measured here as a 43 GB shared-memory resident set, enough
+#' to exhaust 125 GB of host RAM and drive phase-offload staging into
+#' swap for the whole video stage (roughly 2x per-chunk time), or to
+#' OOM outright.
+#'
 #' @return Invisibly, NULL.
 #' @export
 diffuseR_unload <- function() {
     rm(list = ls(.diffuseR_env), envir = .diffuseR_env)
+    rm(list = ls(.diffuser_cache), envir = .diffuser_cache)
     gc(verbose = FALSE)
     if (requireNamespace("torch", quietly = TRUE) &&
         torch::cuda_is_available()) {
@@ -43,6 +54,47 @@ diffuseR_unload <- function() {
            stop("Unsupported resolution: ", resolution, call. = FALSE))
 }
 
+# Available host RAM in GB (MemAvailable, so reclaimable cache counts);
+# NA where /proc/meminfo is not readable. Pinned staging buffers make this
+# the binding constraint for a mixed image+video session, not VRAM.
+.diffuseR_avail_ram_gb <- function() {
+    mi <- suppressWarnings(try(readLines("/proc/meminfo", warn = FALSE),
+                               silent = TRUE))
+    if (inherits(mi, "try-error")) {
+        return(NA_real_)
+    }
+    ln <- grep("^MemAvailable:", mi, value = TRUE)
+    if (length(ln) == 0) {
+        return(NA_real_)
+    }
+    kb <- suppressWarnings(as.numeric(gsub("[^0-9]", "", ln[1])))
+    round(kb / 1024 ^ 2, 2)
+}
+
+# Host RAM below which a batch is likely to stage through swap. LTX's
+# weights and the Gemma3 encoder together want well over this; the alarm
+# is sized to fire before a long run commits to the slow path, not to
+# predict a precise cliff.
+.diffuseR_ram_floor_gb <- function() {
+    as.numeric(getOption("xtx.diffuseR.ram_floor_gb", 24))
+}
+
+# Free VRAM in GB; NA when nvidia-smi is unavailable.
+.diffuseR_free_vram_gb <- function() {
+    if (!nzchar(Sys.which("nvidia-smi"))) {
+        return(NA_real_)
+    }
+    v <- suppressWarnings(try(system2("nvidia-smi",
+                                      c("--query-gpu=memory.free",
+                                        "--format=csv,noheader,nounits"),
+                                      stdout = TRUE, stderr = FALSE),
+                              silent = TRUE))
+    if (inherits(v, "try-error") || length(v) == 0) {
+        return(NA_real_)
+    }
+    round(suppressWarnings(as.numeric(v[1])) / 1024, 2)
+}
+
 .diffuseR_pipeline <- function() {
     pipe <- .diffuseR_env$pipeline
     if (is.null(pipe)) {
@@ -55,6 +107,52 @@ diffuseR_unload <- function() {
         if (!dir.exists(nf4_dir)) {
             stop("NF4 checkpoint artifact not found at ", nf4_dir,
                  "; run diffuseR::download_ltx2() first.", call. = FALSE)
+        }
+        # Both budgets are decided once, here, and then govern every chunk
+        # the session generates -- so a batch that is about to run for
+        # hours says out loud what it is running with.
+        #
+        # VRAM picks the profile: "high" keeps the NF4 transformer
+        # resident, below it weights stream over PCIe per step.
+        #
+        # Host RAM is the one that actually bites. phase_offload stages
+        # components through pinned host buffers, and tti()'s image
+        # pipeline pins its own; a session that generates images and then
+        # video holds both unless diffuseR_unload() ran in between. Once
+        # MemAvailable is gone, staging goes to swap and per-chunk time
+        # roughly doubles for the rest of the run.
+        free_gb <- .diffuseR_free_vram_gb()
+        ram_gb <- .diffuseR_avail_ram_gb()
+        prof <- tryCatch(suppressMessages(diffuseR::ltx23_memory_profile()),
+                         error = function(e) NULL)
+        .diffuseR_env$profile <- prof
+        .diffuseR_env$profile_free_gb <- free_gb
+        .diffuseR_env$profile_ram_gb <- ram_gb
+        if (!is.null(prof)) {
+            message(sprintf(
+                "diffuseR backend: memory profile '%s' (%s, phase_offload=%s) at %.1f GB free VRAM, %.1f GB available RAM",
+                prof$name, prof$precision, prof$phase_offload, free_gb,
+                ram_gb))
+            if (!identical(prof$name, "high")) {
+                warning("diffuseR LTX profile is '", prof$name,
+                        "', not 'high': weights stream per step instead of ",
+                        "staying resident, which roughly doubles per-chunk ",
+                        "time. Only ", sprintf("%.1f", free_gb),
+                        " GB VRAM was free.", call. = FALSE)
+            }
+        }
+        # LTX weights plus the Gemma3 encoder need room to stage; under
+        # this, staging is competing with the page cache at best and
+        # swapping at worst. Threshold is deliberately loose -- it is a
+        # smoke alarm for a 20-hour stage, not a hard gate.
+        if (!is.na(ram_gb) && ram_gb < .diffuseR_ram_floor_gb()) {
+            warning("Only ", sprintf("%.1f", ram_gb), " GB of host RAM is ",
+                    "available as the LTX pipeline loads. Phase-offload ",
+                    "staging will contend for it, which roughly doubles ",
+                    "per-chunk time across a batch. If an image stage ran ",
+                    "first in this session, call xtx.api::diffuseR_unload() ",
+                    "between the stages to release its pinned buffers.",
+                    call. = FALSE)
         }
         message("diffuseR backend: loading LTX-2.3 pipeline (once per session)...")
         pipe <- diffuseR::ltx23_load_pipeline(nf4_dir, device = "cuda",
@@ -181,6 +279,21 @@ diffuseR_unload <- function() {
 
     pipe <- .diffuseR_pipeline()
     cemb <- .diffuseR_connector_embeds(prompt)
+    # stv()'s width, height, num_frames, num_inference_steps and turbo_mode
+    # never reach this path -- the sidecar's request block records them
+    # anyway, because it snapshots the public function's arguments. Report
+    # what actually ran, so a slow batch is diagnosable from the artifacts.
+    prof <- .diffuseR_env$profile
+    .sidecar_note(output, backend = "diffuseR", width = size, height = size,
+                  num_frames = num_frames, frame_rate = 24L,
+                  dtype = "bfloat16", audio_duration = round(dur, 3),
+                  memory_profile = prof$name, precision = prof$precision,
+                  phase_offload = prof$phase_offload,
+                  pin_weights = prof$pin_weights,
+                  vram_free_gb_at_load = .diffuseR_env$profile_free_gb,
+                  vram_free_gb = .diffuseR_free_vram_gb(),
+                  ram_avail_gb_at_load = .diffuseR_env$profile_ram_gb,
+                  ram_avail_gb = .diffuseR_avail_ram_gb())
     res <- diffuseR::txt2vid_ltx2(prompt = prompt, pipeline = pipe,
                                   connector_embeds = cemb, image = image, audio = audio,
                                   width = size, height = size,
