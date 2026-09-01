@@ -45,11 +45,12 @@ expect_equal(base, k(list(height = 512L, width = 512L, prompt = "a cube")))
 # not about a mock's idea of a reply.
 sent <- NULL
 png1 <- as.raw(c(0x89, 0x50, 0x4e, 0x47))
-with_capture <- function(expr) {
+with_capture <- function(expr, content = png1) {
     sent <<- NULL
-    fake <- function(entry, input, timeout) {
-        sent <<- list(entry = entry, input = input, timeout = timeout)
-        list(content = png1, meta = list(width = 8L, height = 8L))
+    fake <- function(entry, input, timeout, accept = "image/png") {
+        sent <<- list(entry = entry, input = input, timeout = timeout,
+                      accept = accept)
+        list(content = content, meta = list(width = 8L, height = 8L))
     }
     unlockBinding(".gpuhost_infer", asNamespace("xtx.api"))
     orig <- xtx.api:::.gpuhost_infer
@@ -109,3 +110,113 @@ expect_message(with_capture(
     xtx.api::tti("a red cube", backend = "gpuhost",
                  negative_prompt = "people, text")), "no CFG")
 expect_false("negative_prompt" %in% names(sent$input))
+## and a picture is what it asked the transport for
+expect_equal(sent$accept, "image/png")
+
+# ---- the video half: the entry is the endpoint's too -----------------
+expect_equal(xtx.api:::.gpuhost_entry("video"), "ltx-2.3")
+options(xtx.gpuhost_video_entry = "ltx-other")
+expect_equal(xtx.api:::.gpuhost_entry("video"), "ltx-other")
+options(xtx.gpuhost_video_entry = NULL)
+expect_error(xtx.api:::.gpuhost_entry("audio"), "should be one of")
+
+# ---- the hash fallback hashes every byte -----------------------------
+#
+# Its first version kept the first 32 bytes as hex. Sorted by field, a video
+# request opens with `audio_b64=UklGR...` -- a WAV header -- so every chunk
+# shared one key. Two inputs that agree on their first 32 bytes must not.
+hash <- xtx.api:::.gpuhost_hash
+a <- c(charToRaw(strrep("x", 40)), as.raw(1L))
+b <- c(charToRaw(strrep("x", 40)), as.raw(2L))
+expect_false(identical(hash(a), hash(b)))
+expect_equal(hash(a), hash(a))
+
+# ---- what a talking head sends ----------------------------------------
+#
+# Real media, because the request is built from probing it: frame counts
+# from the audio's duration, the frame size from the previous clip's, and
+# the audio itself re-encoded with the continuation's lead. ffmpeg makes
+# the fixtures; without it there is nothing to probe.
+if (nzchar(Sys.which("ffmpeg")) && nzchar(Sys.which("ffprobe"))) {
+    td <- tempfile("gpuhost-video")
+    dir.create(td)
+    png <- file.path(td, "start.png")
+    speech <- file.path(td, "speech.wav")
+    clip <- file.path(td, "prev.mp4")
+    system2("ffmpeg", c("-v", "error", "-y", "-f", "lavfi", "-i",
+                        "color=c=blue:size=64x64", "-frames:v", "1", png))
+    system2("ffmpeg", c("-v", "error", "-y", "-f", "lavfi", "-i",
+                        "sine=frequency=440:duration=1.5:sample_rate=24000",
+                        "-ac", "1", speech))
+    system2("ffmpeg", c("-v", "error", "-y", "-f", "lavfi", "-i",
+                        "testsrc=size=96x64:rate=24:duration=1", "-pix_fmt",
+                        "yuv420p", clip))
+    mp4_1 <- c(as.raw(c(0, 0, 0, 0x18)), charToRaw("ftypisom"))
+    b64_of <- function(p) jsonlite::base64_enc(readBin(p, "raw", file.size(p)))
+    sent_wav <- function() {
+        w <- file.path(td, "sent.wav")
+        writeBin(jsonlite::base64_dec(sent$input$audio_b64), w)
+        w
+    }
+
+    ## stv: a start frame, the audio, the clip sized UP to the audio
+    out <- file.path(td, "chunk01.mp4")
+    with_capture(xtx.api::stv(png, speech, output = out, backend = "gpuhost",
+                              prompt = "a moth talks", resolution = "720p",
+                              seed = 11), content = mp4_1)
+    expect_equal(sent$entry, "ltx-2.3")
+    expect_equal(sent$accept, "video/mp4")
+    expect_equal(sent$input$prompt, "a moth talks")
+    ## 720p is the 960^2 avatar square, as on the diffuseR path
+    expect_equal(sent$input$width, 960L)
+    expect_equal(sent$input$height, 960L)
+    ## 1.5 s at 24 fps is 36 frames; the grid rounds UP, to 41
+    expect_equal(sent$input$num_frames, 41L)
+    expect_equal(sent$input$seed, 11L)
+    ## the start frame's exact bytes, in jsonlite's spelling
+    expect_equal(sent$input$image_b64, b64_of(png))
+    expect_false("condition_video_b64" %in% names(sent$input))
+    expect_false("conditioning_frames" %in% names(sent$input))
+    ## the audio arrives as 16 kHz stereo wav of the same length
+    w <- sent_wav()
+    expect_equal(readBin(w, "raw", 4L), charToRaw("RIFF"))
+    expect_equal(xtx.api:::.probe_duration(w), 1.5, tolerance = 0.01)
+    ## the bytes reach the file the caller named
+    expect_equal(readBin(out, "raw", 12L), mp4_1)
+    ## and a swap-sized floor on the timeout
+    expect_equal(sent$timeout, 600)
+
+    ## transition from the previous clip: the clip's OWN frame size, the
+    ## total is audio frames plus the replayed head, and the audio starts
+    ## after that head
+    nxt <- file.path(td, "chunk02.mp4.raw.mp4")
+    with_capture(xtx.api::transition(start_clip = clip, audio = speech,
+                                     output = nxt, conditioning_frames = 9,
+                                     prompt = "a moth talks",
+                                     backend = "gpuhost"), content = mp4_1)
+    expect_equal(sent$input$width, 96L)
+    expect_equal(sent$input$height, 64L)
+    expect_equal(sent$input$num_frames, 49L)   # align(41 + 9 - 1)
+    expect_equal(sent$input$conditioning_frames, 9L)
+    expect_equal(sent$input$condition_video_b64, b64_of(clip))
+    expect_false("image_b64" %in% names(sent$input))
+    expect_equal(xtx.api:::.probe_duration(sent_wav()), 1.5 + 8 / 24,
+                 tolerance = 0.01)
+    expect_equal(sent$timeout, 1800)
+    expect_equal(readBin(nxt, "raw", 12L), mp4_1)
+
+    ## from a still there is no head and no lead
+    with_capture(xtx.api::transition(image_start = png, audio = speech,
+                                     output = nxt, backend = "gpuhost"),
+                 content = mp4_1)
+    expect_equal(sent$input$image_b64, b64_of(png))
+    expect_equal(sent$input$num_frames, 41L)
+    expect_false("conditioning_frames" %in% names(sent$input))
+    expect_equal(xtx.api:::.probe_duration(sent_wav()), 1.5, tolerance = 0.01)
+
+    ## the host renders at 24 fps; another rate cannot be honoured
+    expect_error(with_capture(xtx.api::transition(
+        start_clip = clip, audio = speech, output = nxt, fps = 30,
+        backend = "gpuhost")), "24 fps")
+    unlink(td, recursive = TRUE)
+}

@@ -11,8 +11,10 @@
 #
 # The wire is POST {base}/infer with a closed JSON schema
 # {v, entry, key, input} and the allocation token as a Bearer header. The
-# reply is raw PNG bytes with an X-GpuHost-Meta header, so nothing is
-# base64'd on the way back.
+# reply is raw bytes -- PNG from a picture entry, MP4 from a video one --
+# with an X-GpuHost-Meta header, so nothing is base64'd on the way back.
+# This file is the transport and the picture path; gpuhost_video.R is the
+# talking-head path built on it.
 #
 # The request key is a CONTENT hash, deliberately: the host dedups by key,
 # so a re-run after a crash reuses the committed result instead of paying
@@ -38,14 +40,17 @@
     jsonlite::base64_enc(readBin(p, "raw", file.size(p)))
 }
 
-# WHICH CATALOG ENTRY SERVES PICTURES. A property of the endpoint, not of
-# xtx.api: a gpu.ctl host serves whatever its catalog declares, and the
-# fleet runs more than one. Hardcoding a name makes this usable against
-# exactly one host and refuse the rest with an unknown-entry 400, which
-# reads as a broken service rather than as a name from the wrong catalog.
-.gpuhost_entry <- function(what = "image") {
-    opt <- list(image = "xtx.gpuhost_image_entry")
-    dflt <- list(image = "flux2-klein-4b")
+# WHICH CATALOG ENTRY SERVES PICTURES, AND WHICH SERVES CLIPS. A property
+# of the endpoint, not of xtx.api: a gpu.ctl host serves whatever its
+# catalog declares, and the fleet runs more than one. Hardcoding a name
+# makes this usable against exactly one host and refuse the rest with an
+# unknown-entry 400, which reads as a broken service rather than as a name
+# from the wrong catalog.
+.gpuhost_entry <- function(what = c("image", "video")) {
+    what <- match.arg(what)
+    opt <- list(image = "xtx.gpuhost_image_entry",
+                video = "xtx.gpuhost_video_entry")
+    dflt <- list(image = "flux2-klein-4b", video = "ltx-2.3")
     v <- getOption(opt[[what]], dflt[[what]])
     if (!is.character(v) || length(v) != 1L || !nzchar(v)) {
         stop("options(", opt[[what]], ") must be a single entry name",
@@ -70,25 +75,37 @@
     framed <- lapply(parts, function(p) {
         c(charToRaw(sprintf("%d:", length(p))), p)
     })
-    paste0("xtx-", entry, "-",
-           .gpuhost_sha256(unlist(framed, use.names = FALSE)))
+    paste0("xtx-", entry, "-", .gpuhost_hash(unlist(framed, use.names = FALSE)))
 }
 
-# secretbase when it is there, an openssl-free fallback otherwise. The hash
+# secretbase's sha256 when it is there, base R's md5 otherwise. The hash
 # only has to be stable and collision-resistant across THIS caller's
 # requests; it is not a security boundary.
-.gpuhost_sha256 <- function(x) {
+#
+# THE FALLBACK HASHES EVERY BYTE. Its first version kept the first 32
+# bytes of the framed input as hex, which is not a hash at all: sorted by
+# field, a video request opens with `audio_b64=UklGR...` -- a WAV header --
+# so every chunk of every track shared one key, and the host answers a
+# shared key with the FIRST chunk's result or a conflict refusal. The tests
+# never saw it because secretbase is installed here.
+.gpuhost_hash <- function(x) {
     if (requireNamespace("secretbase", quietly = TRUE)) {
         return(secretbase::sha256(x))
     }
-    paste(sprintf("%02x", as.integer(x[seq_len(min(32L, length(x)))])),
-          collapse = "")
+    f <- tempfile()
+    on.exit(unlink(f), add = TRUE)
+    writeBin(x, f)
+    unname(tools::md5sum(f))
 }
 
-.gpuhost_infer <- function(entry, input, timeout) {
+# POST {base}/infer and hand back the bytes. `accept` is the content type
+# the caller's entry produces -- a picture entry answers image/png, a video
+# entry video/mp4 -- and anything else in a 200 is a reply from a host
+# whose catalog does not agree with the caller about what the entry is.
+.gpuhost_infer <- function(entry, input, timeout, accept = "image/png") {
     key <- .gpuhost_key(entry, input)
-    body <- jsonlite::toJSON(list(v = "gpu-host/1", entry = entry,
-                                  key = key, input = input),
+    body <- jsonlite::toJSON(list(v = "gpu-host/1", entry = entry, key = key,
+                                  input = input),
                              auto_unbox = TRUE)
     h <- curl::new_handle(timeout = timeout, post = TRUE, postfields = body)
     curl::handle_setheaders(h,
@@ -101,15 +118,15 @@
     }
     hl <- curl::parse_headers_list(r$headers)
     ct <- hl[["content-type"]]
-    if (is.null(ct) || !grepl("image/png", ct, fixed = TRUE)) {
-        stop("gpuhost returned no image (content-type ",
+    if (is.null(ct) || !grepl(accept, ct, fixed = TRUE)) {
+        stop("gpuhost returned no ", accept, " (content-type ",
              ct %||% "<none>", "): ",
              substr(rawToChar(r$content), 1, 300), call. = FALSE)
     }
     list(content = r$content,
          meta = if (!is.null(hl[["x-gpuhost-meta"]])) {
-             jsonlite::fromJSON(hl[["x-gpuhost-meta"]])
-         })
+            jsonlite::fromJSON(hl[["x-gpuhost-meta"]])
+        })
 }
 
 # POST {base}/v1/device -- the handoff wire. Separate from `.gpuhost_infer`
@@ -118,10 +135,9 @@
 # two share is the base and the credential.
 .gpuhost_device <- function(op, hold_s = NULL, timeout = 60) {
     body <- c(list(v = "gpu-host/1", op = op),
-              if (!is.null(hold_s)) list(hold_s = as.numeric(hold_s)))
+        if (!is.null(hold_s)) list(hold_s = as.numeric(hold_s)))
     h <- curl::new_handle(timeout = timeout, post = TRUE,
-                          postfields = jsonlite::toJSON(body,
-                                                        auto_unbox = TRUE))
+                          postfields = jsonlite::toJSON(body, auto_unbox = TRUE))
     curl::handle_setheaders(h,
                             "Content-Type" = "application/json",
                             Authorization = paste("Bearer", .gpuhost_bearer()))
@@ -197,11 +213,11 @@ gpuhost_resume <- function() {
 gpuhost_health <- function(entries = NULL) {
     base <- .gpuhost_base()
     r <- tryCatch(curl::curl_fetch_memory(paste0(base, "/health"),
-                                          curl::new_handle(timeout = 15)),
+            curl::new_handle(timeout = 15)),
                   error = function(e) NULL)
     if (is.null(r) || r$status_code != 200L) {
         stop("gpuhost not healthy at ", base,
-             if (!is.null(r)) paste0(" (HTTP ", r$status_code, ")"),
+            if (!is.null(r)) paste0(" (HTTP ", r$status_code, ")"),
              " - it is fleet-managed, not a container to poke; see ",
              base, "/health", call. = FALSE)
     }

@@ -25,7 +25,7 @@ transition(
   seed = NULL,
   output = "transition_output.mp4",
   timeout = 1800,
-  backend = c("wan2gp_api", "diffuseR")
+  backend = c("wan2gp_api", "diffuseR", "gpuhost")
 )
 }
 \arguments{
@@ -80,7 +80,12 @@ Pass a fixed integer >= 0 for reproducible output / clean A/B comparisons.}
 
 \item{timeout}{Timeout in seconds (default 1800; transitions can be slow).}
 
-\item{backend}{Backend to use. Only \code{"wan2gp_api"} is supported.}
+\item{backend}{Backend to use: \code{"wan2gp_api"} (default),
+\code{"diffuseR"} (LTX-2.3 in this process) or \code{"gpuhost"}
+(LTX-2.3 on the vientito-managed gpu.ctl service; see
+\code{\link{stv}}). The last two implement the start-clip and
+start-image shapes only -- no \code{end_image}, keyframes or sliding
+window.}
 
 \item{sliding_window_size,sliding_window_overlap,sliding_window_overlap_noise,sliding_window_discard_last_frames}{LTX-2 sliding-window controls for content longer than one window (\code{NULL}
 defers to the server). Only engaged when \code{num_frames > window}.}
