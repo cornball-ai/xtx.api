@@ -1,3 +1,28 @@
+# xtx.api 0.1.0.13
+
+* **`stv(backend = "gpuhost")` and `transition(backend = "gpuhost")`:**
+  LTX-2.3 talking heads generated on the vientito-managed gpu.ctl service
+  instead of in this process. The contracts are the diffuseR backend's to
+  the frame -- a start frame plus audio sized up to the audio on the 8k+1
+  grid; a continuation that opens with `conditioning_frames` replayed from
+  the previous clip's tail, its audio delayed under that head -- so
+  cornductor's chunk accounting holds without knowing which backend ran.
+  The previous chunk travels as a file and the host reads its tail, which
+  is the in-process path's own fallback on a resume. Audio is sent as
+  16 kHz stereo wav (what LTX's audio VAE reads anyway), prepared with
+  ffmpeg. The entry name is the endpoint's (`xtx.gpuhost_video_entry`,
+  default `ltx-2.3`). Requires gpu.ctl >= 0.1.0.25 on the host, which is
+  where the conditioning inputs were admitted.
+
+  This is what `gpuhost_release()`/`gpuhost_resume()` were a workaround
+  for: the video stage was the last one loading a model in the caller's
+  process on the host's own card. With it on the host, nothing shares the
+  board and nothing needs yielding.
+
+* The request-key hash fallback (no secretbase) now hashes every byte with
+  md5. It kept the first 32 bytes as hex, which for a video request is the
+  WAV header of `audio_b64` -- one key for every chunk of every track.
+
 # xtx.api 0.1.0.12
 
 * **`gpuhost_release(hold_s)` / `gpuhost_resume()`:** ask the gpuhost to
