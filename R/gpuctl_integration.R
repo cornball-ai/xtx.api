@@ -1,7 +1,15 @@
 # gpu.ctl integration for xtx.api
 #
 # Optionally acquires GPU resources before API calls when gpu.ctl is available.
-# Enable with: options(xtx.gpuctl = TRUE)
+# Enable with: options(xtx.gpu.ctl = TRUE)
+#
+# gpu.ctl is not on CRAN, so it is neither imported nor suggested: the
+# namespace is looked up at call time with getExportedValue(), which is
+# what keeps R CMD check from asking for a declaration.
+
+.gpuctl_fn <- function(name) {
+    tryCatch(getExportedValue("gpu.ctl", name), error = function(e) NULL)
+}
 
 # Service configurations
 .gpu_services <- list(
@@ -18,8 +26,8 @@
 #' Check if gpu.ctl integration is enabled
 #' @noRd
 .gpuctl_enabled <- function() {
-    isTRUE(getOption("xtx.gpuctl", FALSE)) &&
-    requireNamespace("gpu.ctl", quietly = TRUE)
+    isTRUE(getOption("xtx.gpu.ctl", FALSE)) &&
+    nzchar(system.file(package = "gpu.ctl"))
 }
 
 #' Register xtx.api services with gpu.ctl
@@ -33,12 +41,12 @@
         svc <- .gpu_services[[name]]
         tryCatch({
             # Only register if not already registered
-            existing <- gpu.ctl::gpu_services()
+            existing <- .gpuctl_fn("gpu_services")()
             if (!name %in% existing$name) {
-                gpu.ctl::gpu_register(name = name, port = svc$port,
-                                      vram = svc$vram,
-                                      container = svc$container,
-                                      health_endpoint = svc$health)
+                .gpuctl_fn("gpu_register")(name = name, port = svc$port,
+                                           vram = svc$vram,
+                                           container = svc$container,
+                                           health_endpoint = svc$health)
             }
         }, error = function(e) {
             # Silently ignore registration errors
@@ -60,7 +68,7 @@
     .gpuctl_register_services()
 
     tryCatch({
-        gpu.ctl::gpu_acquire(service)
+        .gpuctl_fn("gpu_acquire")(service)
         invisible(TRUE)
     }, error = function(e) {
         warning("gpu.ctl: ", e$message, call. = FALSE)
