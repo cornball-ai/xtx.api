@@ -5,7 +5,7 @@
 \usage{
 ttv(
   prompt,
-  output = "ttv_output.mp4",
+  output = file.path(tempdir(), "ttv_output.mp4"),
   backend = c("wan2gp_api", "wan2gp"),
   model = "ltx2",
   num_frames = 97L,
@@ -22,7 +22,8 @@ ttv(
 \arguments{
 \item{prompt}{Text prompt describing the video content}
 
-\item{output}{Path for output video file (default: "ttv_output.mp4")}
+\item{output}{Path for output video file (default: "ttv_output.mp4" under
+\code{tempdir()}; pass a path to keep the file)}
 
 \item{backend}{Backend to use: "wan2gp_api" (default, HTTP) or "wan2gp" (Docker)}
 

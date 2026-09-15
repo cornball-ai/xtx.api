@@ -16,3 +16,10 @@ hold expires on its own, which is the property that makes a crashed
 caller recoverable -- but a stage that finished early should say so
 rather than leaving the host idle for the rest of the window.
 }
+\examples{
+\dontrun{
+  old <- options(xtx.gpuhost_base = "http://gpu-server:7878")
+  gpuhost_resume()$yielded   # TRUE if a hold was in force
+  options(old)
+}
+}

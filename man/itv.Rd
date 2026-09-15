@@ -6,7 +6,7 @@
 itv(
   image,
   prompt = "",
-  output = "itv_output.mp4",
+  output = file.path(tempdir(), "itv_output.mp4"),
   backend = c("cogvideo", "wan2gp_api", "wan2gp"),
   model = NULL,
   num_frames = NULL,
@@ -25,7 +25,8 @@ itv(
 
 \item{prompt}{Motion/scene description}
 
-\item{output}{Path for output video file (default: "itv_output.mp4")}
+\item{output}{Path for output video file (default: "itv_output.mp4" under
+\code{tempdir()}; pass a path to keep the file)}
 
 \item{backend}{Backend to use: "cogvideo" (default), "wan2gp" (Docker), or "wan2gp_api" (HTTP)}
 

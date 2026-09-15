@@ -16,7 +16,7 @@ wan2gp_config(
 
 \item{cache}{Path to HuggingFace cache (default: "~/.cache/huggingface")}
 
-\item{output_dir}{Default output directory (default: current working dir)}
+\item{output_dir}{Default output directory (default: \code{tempdir()})}
 
 \item{profile}{Memory profile 1-4 (4 = low VRAM, default: 4)}
 
@@ -27,4 +27,8 @@ Invisibly returns previous settings as a list
 }
 \description{
 Set default paths and options for WanGP docker integration.
+}
+\examples{
+# Read the current settings without changing anything
+str(wan2gp_config())
 }

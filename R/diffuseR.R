@@ -35,6 +35,11 @@ NULL
 #' OOM outright.
 #'
 #' @return Invisibly, NULL.
+#' @examples
+#' \dontrun{
+#'   # After an image stage, before loading a video model in this process
+#'   diffuseR_unload()
+#' }
 #' @export
 diffuseR_unload <- function() {
     rm(list = ls(.diffuseR_env), envir = .diffuseR_env)
@@ -319,7 +324,7 @@ diffuseR_unload <- function() {
                                  conditioning_frames = NULL, fps = 24,
                                  resolution = "720p", quality = "balanced",
                                  seed = NULL,
-                                 output = "transition_output.mp4",
+                                 output = file.path(tempdir(), "transition_output.mp4"),
                                  timeout = NULL) {
     if (is.null(start_clip) && is.null(image_start)) {
         stop("Provide start_clip or image_start", call. = FALSE)

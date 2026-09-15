@@ -6,7 +6,7 @@
 vtv(
   video,
   prompt = "",
-  output = "vtv_output.mp4",
+  output = file.path(tempdir(), "vtv_output.mp4"),
   backend = "wan2gp",
   model = c("vace", "ltx2"),
   width = 832L,
@@ -24,7 +24,8 @@ vtv(
 
 \item{prompt}{Text prompt describing desired output}
 
-\item{output}{Path for output video file (default: "vtv_output.mp4")}
+\item{output}{Path for output video file (default: "vtv_output.mp4" under
+\code{tempdir()}; pass a path to keep the file)}
 
 \item{backend}{Backend to use: "wan2gp" (default)}
 

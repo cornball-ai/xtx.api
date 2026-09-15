@@ -23,7 +23,7 @@ transition(
   resolution = "720p",
   quality = "balanced",
   seed = NULL,
-  output = "transition_output.mp4",
+  output = file.path(tempdir(), "transition_output.mp4"),
   timeout = 1800,
   backend = c("wan2gp_api", "diffuseR", "gpuhost")
 )
@@ -76,7 +76,8 @@ default. Set per-box prefs in \code{~/.Rprofile}, e.g.
 \item{seed}{Random seed. \code{NULL} (default) defers to the server (random).
 Pass a fixed integer >= 0 for reproducible output / clean A/B comparisons.}
 
-\item{output}{Output file path (default \code{"transition_output.mp4"}).}
+\item{output}{Output file path (default \code{"transition_output.mp4"}
+under \code{tempdir()}; pass a path to keep the file).}
 
 \item{timeout}{Timeout in seconds (default 1800; transitions can be slow).}
 

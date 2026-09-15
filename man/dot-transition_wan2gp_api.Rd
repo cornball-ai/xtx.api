@@ -23,7 +23,7 @@
   resolution = "720p",
   quality = "balanced",
   seed = NULL,
-  output = "transition_output.mp4",
+  output = file.path(tempdir(), "transition_output.mp4"),
   timeout = 1800
 )
 }

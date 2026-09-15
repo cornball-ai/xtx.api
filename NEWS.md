@@ -1,4 +1,38 @@
-# xtx.api 0.1.0.14
+# xtx.api 0.1.1
+
+First CRAN release. The subsections below record the development
+versions between 0.1.0 and this release; the items here are what
+changed for the release itself.
+
+* Output defaults now live under `tempdir()`: `ttv()`, `itv()`, `stv()`,
+  `vtv()` and `transition()` write `<name>_output.mp4` there unless
+  `output` is given, and `wan2gp_config()`'s `output_dir` defaults to
+  `tempdir()` rather than the working directory. Pass a path to keep a
+  file. Nothing else about the calls changed.
+
+* The RIFE frame-interpolation wrappers (`rvf_interp()`, `rvf_morph()`,
+  `rvf_smooth()`, `rvf_available()`, `rvf_info()`) are removed for now,
+  with the `rife` Suggests entry, since that package is not on CRAN.
+
+* The gpu.ctl service-acquisition hook is enabled with
+  `options(xtx.gpu.ctl = TRUE)`; the old `xtx.gpuctl` name is gone. The
+  package no longer lists gpu.ctl in Suggests; the hook resolves the
+  namespace at call time and stays off when the package is absent.
+
+* `compare_backends()` returns its results data frame visibly instead
+  of printing it.
+
+* The gpuhost allocation token is read from `options(xtx.gpuhost_token)`,
+  then the `XTX_GPUHOST_TOKEN` environment variable, then
+  `gpuhost.token` under `tools::R_user_dir("xtx.api", "config")`. The
+  previous default pointed into a fleet-specific home directory; set the
+  option or the variable if you relied on it.
+
+* Declares `R (>= 4.4.0)`, which the code already required through
+  base R's `%||%`. `Authors@R` carries the ORCID and the cornball.ai
+  copyright holder.
+
+## 0.1.0.14
 
 * **`stv(backend = "gpuhost")` and `transition(backend = "gpuhost")`:**
   LTX-2.3 talking heads generated on the viento-managed gpu.ctl service
@@ -6,7 +40,7 @@
   the frame -- a start frame plus audio sized up to the audio on the 8k+1
   grid; a continuation that opens with `conditioning_frames` replayed from
   the previous clip's tail, its audio delayed under that head -- so
-  cornductor's chunk accounting holds without knowing which backend ran.
+  a consumer's chunk accounting holds without knowing which backend ran.
   The previous chunk travels as a file and the host reads its tail, which
   is the in-process path's own fallback on a resume. Audio is sent as
   16 kHz stereo wav (what LTX's audio VAE reads anyway), prepared with
@@ -23,7 +57,7 @@
   md5. It kept the first 32 bytes as hex, which for a video request is the
   WAV header of `audio_b64` -- one key for every chunk of every track.
 
-# xtx.api 0.1.0.13
+## 0.1.0.13
 
 * **`gpuhost_release(hold_s)` / `gpuhost_resume()`:** ask the gpuhost to
   deactivate its resident entry NOW and refuse activating anything for
@@ -40,7 +74,7 @@
   crashed caller's hold expire instead of yielding the fleet's card
   forever. Requires gpu.ctl >= 0.1.0.23 on the host.
 
-# xtx.api 0.1.0.12
+## 0.1.0.12
 
 * **New `tti(backend = "gpuhost")`:** generation on the viento-managed
   gpu.ctl service instead of in the caller's process. The `diffuseR`
@@ -48,7 +82,7 @@
   card, which is fine on a machine nobody else is using and wrong on a
   fleet node -- gpu.ctl's host holds the same card for its resident
   catalog, so two independent CUDA processes compete for one device.
-  Measured on troy-ai: the host held 8.37 GiB of a 15.47 GiB board and the
+  Measured on a 16 GiB card: the host held 8.37 GiB of it and the
   in-process FLUX.2 died allocating 20 MiB, mid-countdown. Configure with
   `options(xtx.gpuhost_base = "http://host:7878")`; the entry name is the
   endpoint's property (`xtx.gpuhost_image_entry`, default
@@ -69,7 +103,7 @@
   path drops it in silence, which is how a caller keeps passing something
   inert for months.
 
-# xtx.api 0.1.0.11
+## 0.1.0.11
 
 * `itv(backend = "wan2gp_api")` and `ttv(backend = "wan2gp_api")` no longer
   abort a slow-but-healthy generation: `.i2v_wan2gp_api()`/`.t2v_wan2gp_api()`
@@ -80,7 +114,7 @@
   regardless of the caller's own `timeout=`, since that parameter only
   sets `CURLOPT_TIMEOUT`, a different mechanism.
 
-# xtx.api 0.1.0.10
+## 0.1.0.10
 
 * Drop the redundant `xtx_` prefix from exported functions (callers
   qualify with `xtx.api::`): `xtx_img_edit` -> `img_edit`,
@@ -90,14 +124,14 @@
   `set_api_base`, `xtx_set_api_key` -> `set_api_key`. Internal helpers
   and file names lost the prefix too. In-org callers updated together.
 
-# xtx.api 0.1.0.9
+## 0.1.0.9
 
 * Sidecar `media` block: the audio branch now records sample rate and
   channels (was duration-only), and a block that measured nothing (a
   bare `format` for an unreadable file) is dropped rather than emitted.
   Keeps the `.sidecar_media` helper identical to tts.api's.
 
-# xtx.api 0.1.0.8
+## 0.1.0.8
 
 * Sidecars record a `media` block of delivered facts probed from the
   produced file: for video the DECODED frame count (`-count_frames`,
@@ -106,21 +140,21 @@
   intent; the media block is what actually landed. Probe failure or a
   missing ffprobe drops the block and never breaks a write. Also guards
   `fn` against `do.call()` callers that spliced the closure source into
-  the record. Consumed by `cornductor::recorded_frames()`.
+  the record, for consumers that assemble clips from these outputs.
 
-# xtx.api 0.1.0.7
+## 0.1.0.7
 
 * diffuseR audio sizing rounds the frame budget UP to the 8n+1 grid
   (`.ceil_8nplus1`); nearest-snap could leave a chunk's video up to 4
   frames short of its narration and desync chained tracks.
 
-# xtx.api 0.1.0.6
+## 0.1.0.6
 
 * Gemma3 fallback fixes: the fp32 path never pins (and never stages
   to the GPU), verbose options are coerced to logical, hfhub is
   declared, and the tail-stash semantics gained tests.
 
-# xtx.api 0.1.0.5
+## 0.1.0.5
 
 * diffuseR chain fast path: chained transitions condition on an
   in-memory stash of the previous chunk's tail (lossless; no more
@@ -130,7 +164,7 @@
   and the text encoder prefers the pinned NF4 artifact (~0.3 s GPU
   swap per encode). Requires diffuseR >= 0.1.0.15.
 
-# xtx.api 0.1.0.4
+## 0.1.0.4
 
 * The diffuseR backend surfaces generation progress by default: the
   stv()/transition() LTX-2.3 calls and tti()'s FLUX.2 path pass
@@ -138,7 +172,7 @@
   silent; options(xtx.diffuseR.verbose =) still overrides the video
   paths.
 
-# xtx.api 0.1.0.1
+## 0.1.0.1
 
 * Add `transition()` and `transition_available()`: generate a bridging clip
   between two pieces of video via the WanGP `/transition` endpoint (LTX-2

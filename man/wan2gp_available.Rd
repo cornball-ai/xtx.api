@@ -11,3 +11,8 @@ TRUE if available, FALSE otherwise
 \description{
 Check if the WanGP Docker container is available.
 }
+\examples{
+\dontrun{
+  wan2gp_available()   # needs Docker and the wan2gp image
+}
+}

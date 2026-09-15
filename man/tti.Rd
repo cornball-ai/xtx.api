@@ -84,7 +84,7 @@ Generate an image from a text prompt using multiple backends.
 # Using OpenAI DALL-E
 set_api_key("sk-...")
 result <- tti("A white cat on a windowsill")
-browseURL(result$data[[1]]$url)
+result$data[[1]]$url
 
 # Using local diffuseR
 result <- tti("A sunset over mountains", backend = "diffuseR")

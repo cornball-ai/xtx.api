@@ -33,3 +33,12 @@ Refused on a co-resident catalog, where holding the card together is
 what the declaration means.
 
 }
+\examples{
+\dontrun{
+  old <- options(xtx.gpuhost_base = "http://gpu-server:7878")
+  gpuhost_release(hold_s = 600)   # the card is ours for ten minutes
+  # ... load and run a model in this process ...
+  gpuhost_resume()
+  options(old)
+}
+}

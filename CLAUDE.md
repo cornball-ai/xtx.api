@@ -75,5 +75,5 @@ devices = list(unet = "cuda", decoder = "cpu",
 ## Options
 
 ```r
-xtx.gpuctl  # Enable GPU management (TRUE/FALSE)
+xtx.gpu.ctl  # Enable gpu.ctl service acquisition (TRUE/FALSE); gpu.ctl is not in Suggests, resolved at call time
 ```

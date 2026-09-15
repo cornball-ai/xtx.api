@@ -11,3 +11,9 @@ TRUE if service is reachable, FALSE otherwise
 \description{
 Check if the rembg background removal service is reachable.
 }
+\examples{
+\dontrun{
+  rembg_base("http://localhost:7824")
+  rembg_health()
+}
+}
