@@ -5,8 +5,8 @@
 # session and generate on the local card. That is fine on a machine nobody
 # else is using, and wrong on a fleet node: gpu.ctl's host holds the same
 # card for its resident catalog, so two independent CUDA processes end up
-# competing for one device. Measured on troy-ai (2026-08-30): the host held
-# 8.37 GiB of a 15.47 GiB board and the in-process FLUX.2 died trying to
+# competing for one device. Measured on a 16 GiB card (2026-08-30): the
+# host held 8.37 GiB of it and the in-process FLUX.2 died trying to
 # allocate 20 MiB, mid-countdown.
 #
 # The wire is POST {base}/infer with a closed JSON schema
@@ -30,12 +30,25 @@
     sub("/+$", "", b)
 }
 
+# The allocation token is read from, in order: options(xtx.gpuhost_token),
+# the XTX_GPUHOST_TOKEN environment variable, then gpuhost.token under
+# tools::R_user_dir("xtx.api", "config"). No default under the home
+# directory: where a fleet keeps its token is the fleet's business.
+.gpuhost_token_path <- function() {
+    p <- getOption("xtx.gpuhost_token")
+    if (is.null(p) || !nzchar(p)) p <- Sys.getenv("XTX_GPUHOST_TOKEN")
+    if (!nzchar(p)) {
+        p <- file.path(tools::R_user_dir("xtx.api", "config"), "gpuhost.token")
+    }
+    path.expand(p)
+}
+
 .gpuhost_bearer <- function() {
-    p <- path.expand(getOption("xtx.gpuhost_token",
-                               "~/vto/gpuhost-ctl/gpuhost.token"))
+    p <- .gpuhost_token_path()
     if (!file.exists(p)) {
         stop("gpuhost token file not found at ", p,
-             "; set options(xtx.gpuhost_token = ...)", call. = FALSE)
+             "; set options(xtx.gpuhost_token = ...) or XTX_GPUHOST_TOKEN",
+             call. = FALSE)
     }
     jsonlite::base64_enc(readBin(p, "raw", file.size(p)))
 }
@@ -174,6 +187,14 @@
 #'   use of a shared card is a decision, and no default can make it.
 #' @return Invisibly the host's report: whether anything was actually
 #'   released, which entry, and the granted hold.
+#' @examples
+#' \dontrun{
+#'   old <- options(xtx.gpuhost_base = "http://gpu-server:7878")
+#'   gpuhost_release(hold_s = 600)   # the card is ours for ten minutes
+#'   # ... load and run a model in this process ...
+#'   gpuhost_resume()
+#'   options(old)
+#' }
 #' @export
 gpuhost_release <- function(hold_s) {
     if (!is.numeric(hold_s) || length(hold_s) != 1L || is.na(hold_s) ||
@@ -193,6 +214,12 @@ gpuhost_release <- function(hold_s) {
 #' @return Invisibly the host's report, including whether a hold was
 #'   actually in force. Resuming a host that was not yielded is not an
 #'   error, and the answer distinguishes the two.
+#' @examples
+#' \dontrun{
+#'   old <- options(xtx.gpuhost_base = "http://gpu-server:7878")
+#'   gpuhost_resume()$yielded   # TRUE if a hold was in force
+#'   options(old)
+#' }
 #' @export
 gpuhost_resume <- function() {
     .gpuhost_device("resume")
@@ -209,6 +236,12 @@ gpuhost_resume <- function() {
 #' @param entries Optional character vector of catalog entry names this
 #'   run will ask for.
 #' @return The health payload's \code{value}, invisibly.
+#' @examples
+#' \dontrun{
+#'   old <- options(xtx.gpuhost_base = "http://gpu-server:7878")
+#'   gpuhost_health(entries = c("flux2-klein-4b", "ltx-2.3"))
+#'   options(old)
+#' }
 #' @export
 gpuhost_health <- function(entries = NULL) {
     base <- .gpuhost_base()
@@ -265,15 +298,15 @@ gpuhost_health <- function(entries = NULL) {
     # has no such argument, and the in-process path drops it silently. The
     # host's schema is closed, so sending it would be a 400 -- and dropping
     # it without a word is how a caller keeps passing something inert for
-    # months. lc40 has passed one since the day the stage was written.
+    # months, which is exactly what one downstream stage did.
     if (!is.null(negative_prompt) && nzchar(negative_prompt)) {
         message("gpuhost: ", .gpuhost_entry("image"), " has no CFG, so the ",
                 "negative prompt is not sent (it is ignored in-process too)")
     }
     # A SWAP CAN PRECEDE THE WORK. `tti()`'s 120 s default was written for
     # a warm in-process pipeline; on a swap catalog the host may first move
-    # a 12.5 GiB entry onto the card, which was measured at 37 s on troy-ai
-    # before a single step ran. A caller who asks for more gets more.
+    # a 12.5 GiB entry onto the card, which was measured at 37 s on one
+    # host before a single step ran. A caller who asks for more gets more.
     timeout <- max(timeout, 300)
     entry <- .gpuhost_entry("image")
     out <- .gpuhost_infer(entry, input, timeout = timeout)

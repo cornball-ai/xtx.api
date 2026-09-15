@@ -19,3 +19,10 @@ alone says the front is serving and nothing about the catalog behind
 it, so a base pointed at the wrong host in the fleet passes and then
 fails on the first real request.
 }
+\examples{
+\dontrun{
+  old <- options(xtx.gpuhost_base = "http://gpu-server:7878")
+  gpuhost_health(entries = c("flux2-klein-4b", "ltx-2.3"))
+  options(old)
+}
+}
