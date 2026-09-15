@@ -1,4 +1,4 @@
-# xtx.api 0.1.0.13
+# xtx.api 0.1.0.14
 
 * **`stv(backend = "gpuhost")` and `transition(backend = "gpuhost")`:**
   LTX-2.3 talking heads generated on the viento-managed gpu.ctl service
@@ -23,7 +23,7 @@
   md5. It kept the first 32 bytes as hex, which for a video request is the
   WAV header of `audio_b64` -- one key for every chunk of every track.
 
-# xtx.api 0.1.0.12
+# xtx.api 0.1.0.13
 
 * **`gpuhost_release(hold_s)` / `gpuhost_resume()`:** ask the gpuhost to
   deactivate its resident entry NOW and refuse activating anything for
@@ -40,7 +40,7 @@
   crashed caller's hold expire instead of yielding the fleet's card
   forever. Requires gpu.ctl >= 0.1.0.23 on the host.
 
-# xtx.api 0.1.0.11
+# xtx.api 0.1.0.12
 
 * **New `tti(backend = "gpuhost")`:** generation on the viento-managed
   gpu.ctl service instead of in the caller's process. The `diffuseR`
