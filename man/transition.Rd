@@ -82,7 +82,7 @@ Pass a fixed integer >= 0 for reproducible output / clean A/B comparisons.}
 
 \item{backend}{Backend to use: \code{"wan2gp_api"} (default),
 \code{"diffuseR"} (LTX-2.3 in this process) or \code{"gpuhost"}
-(LTX-2.3 on the vientito-managed gpu.ctl service; see
+(LTX-2.3 on the viento-managed gpu.ctl service; see
 \code{\link{stv}}). The last two implement the start-clip and
 start-image shapes only -- no \code{end_image}, keyframes or sliding
 window.}

@@ -1,4 +1,4 @@
-# The gpuhost backend: generation on the vientito-managed gpu.ctl service
+# The gpuhost backend: generation on the viento-managed gpu.ctl service
 # instead of in this process.
 #
 # WHY IT EXISTS. The diffuseR backends load a pipeline into the CALLER's R

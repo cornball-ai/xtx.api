@@ -40,7 +40,7 @@ tti_base <- function(url) {
 #'   - "openai": DALL-E API (requires API key)
 #'   - "diffuseR": Local diffuseR package
 #'   - "diffusers_api": HTTP API (Z-Image-Turbo, SD)
-#'   - "gpuhost": the vientito-managed gpu.ctl service, which generates on
+#'   - "gpuhost": the viento-managed gpu.ctl service, which generates on
 #'     ITS card rather than in this process. Set
 #'     \code{options(xtx.gpuhost_base = "http://host:7878")}. Prefer this
 #'     on any machine where a gpu.ctl host is resident: the in-process

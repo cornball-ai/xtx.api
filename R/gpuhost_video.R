@@ -1,5 +1,5 @@
 # The gpuhost backend's VIDEO half: stv() and transition() on the
-# vientito-managed gpu.ctl service, against its `ltx-2.3` entry.
+# viento-managed gpu.ctl service, against its `ltx-2.3` entry.
 #
 # WHY A SECOND FILE. gpuhost.R is the transport and the picture path; this
 # is what a talking head needs on top of it, and it is the half that could

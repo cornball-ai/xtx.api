@@ -1,7 +1,7 @@
 # xtx.api 0.1.0.13
 
 * **`stv(backend = "gpuhost")` and `transition(backend = "gpuhost")`:**
-  LTX-2.3 talking heads generated on the vientito-managed gpu.ctl service
+  LTX-2.3 talking heads generated on the viento-managed gpu.ctl service
   instead of in this process. The contracts are the diffuseR backend's to
   the frame -- a start frame plus audio sized up to the audio on the 8k+1
   grid; a continuation that opens with `conditioning_frames` replayed from
@@ -42,7 +42,7 @@
 
 # xtx.api 0.1.0.11
 
-* **New `tti(backend = "gpuhost")`:** generation on the vientito-managed
+* **New `tti(backend = "gpuhost")`:** generation on the viento-managed
   gpu.ctl service instead of in the caller's process. The `diffuseR`
   backends load a pipeline into this R session and generate on the local
   card, which is fine on a machine nobody else is using and wrong on a

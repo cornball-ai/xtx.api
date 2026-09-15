@@ -37,7 +37,7 @@ stv(
 
 \item{backend}{Backend to use: "sadtalker" (default), "wan2gp" (Docker),
 "wan2gp_api" (HTTP API), "diffuseR" (LTX-2.3 in this process), or
-"gpuhost" (LTX-2.3 on the vientito-managed gpu.ctl service, on ITS
+"gpuhost" (LTX-2.3 on the viento-managed gpu.ctl service, on ITS
 card rather than this one). For gpuhost set
 \code{options(xtx.gpuhost_base = "http://host:7878")}; the entry name is
 the endpoint's (\code{xtx.gpuhost_video_entry}, default
