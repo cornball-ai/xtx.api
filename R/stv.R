@@ -536,7 +536,8 @@ stv_face_delete <- function(face_id) {
     }
 
     h <- curl::new_handle()
-    curl::handle_setopt(h, timeout = timeout)
+    curl::handle_setopt(h, timeout = timeout, low_speed_time = 0,
+                        low_speed_limit = 0) # Disable low-speed timeout (quality mode is slow)
 
     curl::handle_setform(h, image = curl::form_file(image), prompt = prompt,
                          num_frames = as.character(num_frames),
@@ -579,7 +580,8 @@ stv_face_delete <- function(face_id) {
     url <- paste0(base, "/t2v")
 
     h <- curl::new_handle()
-    curl::handle_setopt(h, timeout = timeout)
+    curl::handle_setopt(h, timeout = timeout, low_speed_time = 0,
+                        low_speed_limit = 0) # Disable low-speed timeout (quality mode is slow)
 
     curl::handle_setform(h, prompt = prompt,
                          num_frames = as.character(num_frames),
