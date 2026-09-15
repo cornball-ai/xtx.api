@@ -7,7 +7,8 @@
 #'
 #' @param video Path to source video file
 #' @param prompt Text prompt describing desired output
-#' @param output Path for output video file (default: "vtv_output.mp4")
+#' @param output Path for output video file (default: "vtv_output.mp4" under
+#'   \code{tempdir()}; pass a path to keep the file)
 #' @param backend Backend to use: "wan2gp" (default)
 #' @param model Model ID: "vace" (motion transfer) or "ltx2" (enhancement/style)
 #' @param width Output video width (default: 832)
@@ -30,7 +31,8 @@
 #'       model = "ltx2", output = "enhanced.mp4")
 #' }
 #' @export
-vtv <- function(video, prompt = "", output = "vtv_output.mp4",
+vtv <- function(video, prompt = "",
+                output = file.path(tempdir(), "vtv_output.mp4"),
                 backend = "wan2gp", model = c("vace", "ltx2"), width = 832L,
                 height = 832L, num_frames = NULL, num_steps = NULL,
                 guidance_scale = NULL, strength = 0.5, seed = NULL,

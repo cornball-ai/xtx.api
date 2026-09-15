@@ -37,6 +37,11 @@ rembg_base <- function(url) {
 #' Check if the rembg background removal service is reachable.
 #'
 #' @return TRUE if service is reachable, FALSE otherwise
+#' @examples
+#' \dontrun{
+#'   rembg_base("http://localhost:7824")
+#'   rembg_health()
+#' }
 #' @export
 rembg_health <- function() {
     base <- tryCatch(.rembg_get_base(), error = function(e) NULL)

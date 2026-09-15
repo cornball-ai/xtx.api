@@ -104,7 +104,7 @@ unlink(res$data[[1]]$image)
 
 # ---- a negative prompt is refused out loud, not swallowed -----------
 # FLUX.2 klein is guidance-distilled: no CFG, so nothing for it to attach
-# to. The in-process path drops it in silence, which is how lc40 kept
+# to. The in-process path drops it in silence, which is how a caller kept
 # passing one for months without anything saying so.
 expect_message(with_capture(
     xtx.api::tti("a red cube", backend = "gpuhost",

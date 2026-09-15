@@ -1,17 +1,26 @@
 Package: xtx.api
 Title: Cross-Modal Generative Interfaces
 Version: 0.1.0.14
-Authors@R:
-    person("Troy", "Hernandez", email = "troy@cornball.ai", role = c("aut", "cre"))
-Description:
-    xtx.api provides a unified interface for cross-modal generative models,
-    enabling transformations between text, image, audio, and video modalities.
-    The package acts as a lightweight orchestration layer over external
-    generation engines such as diffusion models, talking-head systems,
-    and hosted APIs. It is designed to integrate cleanly with the stt.api
-    and tts.api packages.
+Date: 2026-09-15
+Authors@R: c(
+    person("Troy", "Hernandez", role = c("aut", "cre"),
+           email = "troy@cornball.ai",
+           comment = c(ORCID = "0009-0005-4248-604X")),
+    person("cornball.ai", role = "cph"))
+Description: A unified interface for cross-modal generative models: text to
+    image, image to video, text to video, and speech-driven talking heads.
+    The package is a lightweight orchestration layer over external generation
+    engines, either in-process through the 'diffuseR' package or over HTTP to
+    self-hosted services such as 'WanGP' <https://github.com/deepbeepmeep/Wan2GP>
+    and 'SadTalker' <https://github.com/OpenTalker/SadTalker>, and to hosted
+    services such as 'OpenAI' <https://openai.com/>. Every asset-producing
+    call records a sidecar file describing the request and the delivered
+    media. Designed to pair with the 'stt.api' and 'tts.api' packages.
 License: MIT + file LICENSE
+SystemRequirements: ffmpeg and ffprobe on the PATH for the in-process video
+    backends and for media probing of delivered files.
 Encoding: UTF-8
+Depends: R (>= 4.4.0)
 URL: https://github.com/cornball-ai/xtx.api
 BugReports: https://github.com/cornball-ai/xtx.api/issues
 Imports:
@@ -21,8 +30,6 @@ Imports:
 Suggests:
     hfhub,
     diffuseR (>= 0.1.0.15),
-    gpu.ctl,
-    rife,
     secretbase,
     tinytest,
     torch

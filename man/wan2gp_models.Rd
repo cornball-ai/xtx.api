@@ -11,3 +11,6 @@ A data.frame with model information
 \description{
 Show available model types and their requirements.
 }
+\examples{
+wan2gp_models()
+}

@@ -67,7 +67,8 @@
 #'   (default \code{"balanced"}).
 #' @param seed Random seed. \code{NULL} (default) defers to the server (random).
 #'   Pass a fixed integer >= 0 for reproducible output / clean A/B comparisons.
-#' @param output Output file path (default \code{"transition_output.mp4"}).
+#' @param output Output file path (default \code{"transition_output.mp4"}
+#'   under \code{tempdir()}; pass a path to keep the file).
 #' @param timeout Timeout in seconds (default 1800; transitions can be slow).
 #' @param backend Backend to use: \code{"wan2gp_api"} (default),
 #'   \code{"diffuseR"} (LTX-2.3 in this process) or \code{"gpuhost"}
@@ -110,7 +111,8 @@ transition <- function(start_clip = NULL, image_start = NULL,
                        sliding_window_discard_last_frames = NULL, fps = 24,
                        window = 129, resolution = "720p",
                        quality = "balanced", seed = NULL,
-                       output = "transition_output.mp4", timeout = 1800,
+                       output = file.path(tempdir(), "transition_output.mp4"),
+                       timeout = 1800,
                        backend = c("wan2gp_api", "diffuseR", "gpuhost")) {
     .sidecar_arm(environment())
     backend <- match.arg(backend)
@@ -187,7 +189,7 @@ transition <- function(start_clip = NULL, image_start = NULL,
                                    fps = 24, window = 129,
                                    resolution = "720p", quality = "balanced",
                                    seed = NULL,
-                                   output = "transition_output.mp4",
+                                   output = file.path(tempdir(), "transition_output.mp4"),
                                    timeout = 1800) {
     # Per-box prefs live client-side (xtx.* option namespace), not in the repo's
     # canonical server defaults: explicit arg > ~/.Rprofile option > server default.

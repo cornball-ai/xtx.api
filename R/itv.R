@@ -101,7 +101,8 @@ itv_health <- function() {
 #'
 #' @param image Path to starting frame image (PNG/JPG) or base64 string
 #' @param prompt Motion/scene description
-#' @param output Path for output video file (default: "itv_output.mp4")
+#' @param output Path for output video file (default: "itv_output.mp4" under
+#'   \code{tempdir()}; pass a path to keep the file)
 #' @param backend Backend to use: "cogvideo" (default), "wan2gp" (Docker), or "wan2gp_api" (HTTP)
 #' @param model Model ID. For cogvideo: "THUDM/CogVideoX-5b-I2V".
 #'   For wan2gp: "ltx2" (default).
@@ -130,7 +131,8 @@ itv_health <- function() {
 #'       backend = "wan2gp", model = "ltx2")
 #' }
 #' @export
-itv <- function(image, prompt = "", output = "itv_output.mp4",
+itv <- function(image, prompt = "",
+                output = file.path(tempdir(), "itv_output.mp4"),
                 backend = c("cogvideo", "wan2gp_api", "wan2gp"),
                 model = NULL, num_frames = NULL, num_steps = NULL,
                 width = 832L, height = 832L, resolution = "720p",

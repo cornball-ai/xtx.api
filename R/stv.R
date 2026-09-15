@@ -166,7 +166,8 @@ stv_available <- function(port = NULL, timeout = 2) {
 #'
 #' @param image Path to portrait image (PNG/JPG, front-facing) or base64 string
 #' @param audio Path to speech audio file (WAV/MP3) or base64 string
-#' @param output Path for output video file (default: "stv_output.mp4")
+#' @param output Path for output video file (default: "stv_output.mp4" under
+#'   \code{tempdir()}; pass a path to keep the file)
 #' @param backend Backend to use: "sadtalker" (default), "wan2gp" (Docker),
 #'   "wan2gp_api" (HTTP API), "diffuseR" (LTX-2.3 in this process), or
 #'   "gpuhost" (LTX-2.3 on the viento-managed gpu.ctl service, on ITS
@@ -217,7 +218,8 @@ stv_available <- function(port = NULL, timeout = 2) {
 #'       prompt = "Person speaking into microphone")
 #' }
 #' @export
-stv <- function(image = NULL, audio, output = "stv_output.mp4",
+stv <- function(image = NULL, audio,
+                output = file.path(tempdir(), "stv_output.mp4"),
                 backend = c("sadtalker", "wan2gp", "wan2gp_api", "diffuseR", "gpuhost"),
                 model = NULL, face_id = NULL, enhance = FALSE,
                 prompt = "Person speaking naturally", resolution = "720p",
@@ -615,6 +617,11 @@ stv_face_delete <- function(face_id) {
 #' Check if WanGP API is available
 #'
 #' @return TRUE if the WanGP API is reachable, FALSE otherwise
+#' @examples
+#' \dontrun{
+#'   wan2gp_api_base("http://localhost:8000")
+#'   wan2gp_api_available()
+#' }
 #' @export
 wan2gp_api_available <- function() {
     base <- tryCatch(.wan2gp_api_get_base(), error = function(e) NULL)

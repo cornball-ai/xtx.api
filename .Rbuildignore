@@ -1,7 +1,10 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^\.Rhistory$
+^\.gitignore$
 ^CLAUDE\.md$
 ^\.claude$
 ^fyi\.md$
 ^man-md$
+^cran-comments\.md$
 ^.*\.tar\.gz$

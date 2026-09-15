@@ -30,3 +30,9 @@ swap for the whole video stage (roughly 2x per-chunk time), or to
 OOM outright.
 
 }
+\examples{
+\dontrun{
+  # After an image stage, before loading a video model in this process
+  diffuseR_unload()
+}
+}

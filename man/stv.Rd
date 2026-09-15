@@ -6,7 +6,7 @@
 stv(
   image = NULL,
   audio,
-  output = "stv_output.mp4",
+  output = file.path(tempdir(), "stv_output.mp4"),
   backend = c("sadtalker", "wan2gp", "wan2gp_api", "diffuseR", "gpuhost"),
   model = NULL,
   face_id = NULL,
@@ -33,7 +33,8 @@ stv(
 
 \item{audio}{Path to speech audio file (WAV/MP3) or base64 string}
 
-\item{output}{Path for output video file (default: "stv_output.mp4")}
+\item{output}{Path for output video file (default: "stv_output.mp4" under
+\code{tempdir()}; pass a path to keep the file)}
 
 \item{backend}{Backend to use: "sadtalker" (default), "wan2gp" (Docker),
 "wan2gp_api" (HTTP API), "diffuseR" (LTX-2.3 in this process), or

@@ -6,7 +6,8 @@
 #' Uses LTX-2 via WanGP API or Docker.
 #'
 #' @param prompt Text prompt describing the video content
-#' @param output Path for output video file (default: "ttv_output.mp4")
+#' @param output Path for output video file (default: "ttv_output.mp4" under
+#'   \code{tempdir()}; pass a path to keep the file)
 #' @param backend Backend to use: "wan2gp_api" (default, HTTP) or "wan2gp" (Docker)
 #' @param model Model ID for Docker backend: "ltx2" (default)
 #' @param num_frames Number of frames to generate (default: 97, ~4s at 24fps)
@@ -34,7 +35,7 @@
 #'       width = 1280, height = 720, num_frames = 129)
 #' }
 #' @export
-ttv <- function(prompt, output = "ttv_output.mp4",
+ttv <- function(prompt, output = file.path(tempdir(), "ttv_output.mp4"),
                 backend = c("wan2gp_api", "wan2gp"), model = "ltx2",
                 num_frames = 97L, resolution = "720p", quality = "balanced",
                 width = 832L, height = 832L, num_steps = NULL,

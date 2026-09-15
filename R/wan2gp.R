@@ -9,10 +9,13 @@
 #'
 #' @param workspace Path to Wan2GP workspace (default: "~/Wan2GP")
 #' @param cache Path to HuggingFace cache (default: "~/.cache/huggingface")
-#' @param output_dir Default output directory (default: current working dir)
+#' @param output_dir Default output directory (default: \code{tempdir()})
 #' @param profile Memory profile 1-4 (4 = low VRAM, default: 4)
 #' @param container Docker image name (default: "wan2gp:blackwell")
 #' @return Invisibly returns previous settings as a list
+#' @examples
+#' # Read the current settings without changing anything
+#' str(wan2gp_config())
 #' @export
 wan2gp_config <- function(workspace = NULL, cache = NULL, output_dir = NULL,
                           profile = NULL, container = NULL) {
@@ -48,7 +51,7 @@ wan2gp_config <- function(workspace = NULL, cache = NULL, output_dir = NULL,
          workspace = getOption("xtx.wan2gp.workspace", path.expand("~/Wan2GP")),
          cache = getOption("xtx.wan2gp.cache",
                            path.expand("~/.cache/huggingface")),
-         output_dir = getOption("xtx.wan2gp.output_dir", getwd()),
+         output_dir = getOption("xtx.wan2gp.output_dir", tempdir()),
          profile = getOption("xtx.wan2gp.profile", 4L),
          container = getOption("xtx.wan2gp.container", "wan2gp:blackwell")
     )
@@ -101,6 +104,8 @@ wan2gp_config <- function(workspace = NULL, cache = NULL, output_dir = NULL,
 #' Show available model types and their requirements.
 #'
 #' @return A data.frame with model information
+#' @examples
+#' wan2gp_models()
 #' @export
 wan2gp_models <- function() {
     data.frame(
@@ -354,6 +359,10 @@ wan2gp_models <- function() {
 #' Check if the WanGP Docker container is available.
 #'
 #' @return TRUE if available, FALSE otherwise
+#' @examples
+#' \dontrun{
+#'   wan2gp_available()   # needs Docker and the wan2gp image
+#' }
 #' @export
 wan2gp_available <- function() {
     cfg <- .wan2gp_get_config()

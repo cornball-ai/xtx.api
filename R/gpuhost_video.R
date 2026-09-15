@@ -5,17 +5,17 @@
 # is what a talking head needs on top of it, and it is the half that could
 # not exist until the host admitted conditioning (gpu.ctl 0.1.0.25). Before
 # that, `stv(backend = "diffuseR")` loaded LTX into the caller's process on
-# the same card the host serves from, and the hold/release choreography in
-# lc40 and LilCasey existed to keep the two apart. Sending the work to the
-# host retires it.
+# the same card the host serves from, and the hold/release choreography
+# downstream existed to keep the two apart. Sending the work to the host
+# retires it.
 #
 # THE CONTRACTS ARE THE diffuseR BACKEND'S, TO THE FRAME. stv(): a start
 # frame plus audio, the clip sized UP to the audio on the 8k+1 grid.
 # transition() from a clip: the output opens with `conditioning_frames`
 # frames replayed from the source's tail and the audio is delayed under
-# that head, so the consumer's trim-or-crossfade accounting (cornductor's
-# `.gen_chunk_video`, `bed_layout`) holds without knowing which backend
-# ran. The one difference is where the tail comes from: in-process the
+# that head, so a consumer's trim-or-crossfade accounting holds without
+# knowing which backend ran. The one difference is where the tail comes
+# from: in-process the
 # previous chunk's frames are stashed losslessly; here the previous FILE
 # travels and the host reads its tail, which is the in-process path's own
 # fallback on a resume.
@@ -140,7 +140,7 @@
                                 conditioning_frames = NULL, fps = 24,
                                 resolution = "720p", quality = "balanced",
                                 seed = NULL,
-                                output = "transition_output.mp4",
+                                output = file.path(tempdir(), "transition_output.mp4"),
                                 timeout = 1800) {
     if (is.null(start_clip) && is.null(image_start)) {
         stop("Provide start_clip or image_start", call. = FALSE)

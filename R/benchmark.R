@@ -116,7 +116,5 @@ compare_backends <- function(prompt, backends = NULL, ...) {
             ))
     }
 
-    message("\nResults:")
-    print(results)
-    invisible(results)
+    results
 }

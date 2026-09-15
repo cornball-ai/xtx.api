@@ -67,6 +67,13 @@
 }
 
 #' Clear diffuseR pipeline cache
+#'
+#' Drops every cached diffuseR pipeline so the next call reloads it,
+#' freeing the GPU memory the pipelines held.
+#'
+#' @return Invisibly \code{NULL}; called for its side effect.
+#' @examples
+#' clear_diffuser_cache()
 #' @export
 clear_diffuser_cache <- function() {
     rm(list = ls(.diffuser_cache), envir = .diffuser_cache)
