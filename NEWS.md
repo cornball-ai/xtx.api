@@ -1,3 +1,74 @@
+# xtx.api 0.1.0.14
+
+* **`stv(backend = "gpuhost")` and `transition(backend = "gpuhost")`:**
+  LTX-2.3 talking heads generated on the viento-managed gpu.ctl service
+  instead of in this process. The contracts are the diffuseR backend's to
+  the frame -- a start frame plus audio sized up to the audio on the 8k+1
+  grid; a continuation that opens with `conditioning_frames` replayed from
+  the previous clip's tail, its audio delayed under that head -- so
+  cornductor's chunk accounting holds without knowing which backend ran.
+  The previous chunk travels as a file and the host reads its tail, which
+  is the in-process path's own fallback on a resume. Audio is sent as
+  16 kHz stereo wav (what LTX's audio VAE reads anyway), prepared with
+  ffmpeg. The entry name is the endpoint's (`xtx.gpuhost_video_entry`,
+  default `ltx-2.3`). Requires gpu.ctl >= 0.1.0.25 on the host, which is
+  where the conditioning inputs were admitted.
+
+  This is what `gpuhost_release()`/`gpuhost_resume()` were a workaround
+  for: the video stage was the last one loading a model in the caller's
+  process on the host's own card. With it on the host, nothing shares the
+  board and nothing needs yielding.
+
+* The request-key hash fallback (no secretbase) now hashes every byte with
+  md5. It kept the first 32 bytes as hex, which for a video request is the
+  WAV header of `audio_b64` -- one key for every chunk of every track.
+
+# xtx.api 0.1.0.13
+
+* **`gpuhost_release(hold_s)` / `gpuhost_resume()`:** ask the gpuhost to
+  deactivate its resident entry NOW and refuse activating anything for
+  the stated window, so a caller can use the same card without racing
+  the host's idle timer. The case it exists for is a stage that
+  generates images on the host and then loads a video model in this
+  process on the same board: the idle release fires only after a lull,
+  so the two overlap by whatever the timer has left, and the failure is
+  a CUDA OOM well into the stage.
+
+  `hold_s` has no default. Exclusive use of a shared card is a decision,
+  and no default can make it. The host bounds it at 3600 s -- a stage
+  longer than that re-arms per unit of work, which is also what lets a
+  crashed caller's hold expire instead of yielding the fleet's card
+  forever. Requires gpu.ctl >= 0.1.0.23 on the host.
+
+# xtx.api 0.1.0.12
+
+* **New `tti(backend = "gpuhost")`:** generation on the viento-managed
+  gpu.ctl service instead of in the caller's process. The `diffuseR`
+  backends load a pipeline into this R session and generate on the local
+  card, which is fine on a machine nobody else is using and wrong on a
+  fleet node -- gpu.ctl's host holds the same card for its resident
+  catalog, so two independent CUDA processes compete for one device.
+  Measured on troy-ai: the host held 8.37 GiB of a 15.47 GiB board and the
+  in-process FLUX.2 died allocating 20 MiB, mid-countdown. Configure with
+  `options(xtx.gpuhost_base = "http://host:7878")`; the entry name is the
+  endpoint's property (`xtx.gpuhost_image_entry`, default
+  `flux2-klein-4b`), because the fleet runs more than one catalog.
+
+* `gpuhost_health()` probes the service and, given `entries`, checks that
+  the host's catalog actually carries them. "ok" alone says the front is
+  serving and nothing about the catalog behind it.
+
+* `steps` reaches the gpuhost only when the caller ASKED for it. `tti()`
+  defaults it to 50, which is the SD family's number; FLUX.2 klein is a
+  4-step distilled model, so sending the default would be twelve times the
+  work for no gain and would look like the caller's choice.
+
+* A `negative_prompt` on the gpuhost backend is reported, not swallowed.
+  FLUX.2 klein is guidance-distilled -- no CFG for one to attach to, and
+  `diffuseR::txt2img_flux2()` has no such argument -- so the in-process
+  path drops it in silence, which is how a caller keeps passing something
+  inert for months.
+
 # xtx.api 0.1.0.11
 
 * `itv(backend = "wan2gp_api")` and `ttv(backend = "wan2gp_api")` no longer

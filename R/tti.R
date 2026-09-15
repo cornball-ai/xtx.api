@@ -40,6 +40,11 @@ tti_base <- function(url) {
 #'   - "openai": DALL-E API (requires API key)
 #'   - "diffuseR": Local diffuseR package
 #'   - "diffusers_api": HTTP API (Z-Image-Turbo, SD)
+#'   - "gpuhost": the viento-managed gpu.ctl service, which generates on
+#'     ITS card rather than in this process. Set
+#'     \code{options(xtx.gpuhost_base = "http://host:7878")}. Prefer this
+#'     on any machine where a gpu.ctl host is resident: the in-process
+#'     diffuseR backends compete with it for the same device.
 #'   - "auto": Use diffuseR if available, else openai
 #' @param model Character. Model to use. Depends on backend:
 #'   - OpenAI: "dall-e-3", "dall-e-2"
@@ -98,13 +103,20 @@ tti_base <- function(url) {
 #'
 #' @export
 tti <- function(prompt,
-                backend = c("openai", "diffuseR", "diffusers_api", "auto"),
+                backend = c("openai", "diffuseR", "diffusers_api", "gpuhost",
+                            "auto"),
                 model = NULL, negative_prompt = NULL, size = NULL,
                 quality = "standard", style = "vivid", n = 1, steps = 50,
                 guidance_scale = 7.5, seed = NULL, lora = NULL,
                 lora_scale = 0.8, devices = "cpu", response_format = "url",
                 file = NULL, timeout = 120) {
     .sidecar_arm(environment(), "file")
+    # ASKED FOR, OR DEFAULTED? Read before anything can force it. `steps`
+    # defaults to 50, the SD family's number; FLUX.2 klein is a 4-step
+    # distilled model, so sending 50 to the gpuhost would be twelve times
+    # the work for no gain, while a caller who genuinely asked for 50 must
+    # get it. Only `missing()` distinguishes those, and only here.
+    steps_asked <- !missing(steps)
     if (!is.character(prompt) || length(prompt) != 1 || nchar(prompt) == 0) {
         stop("'prompt' must be a non-empty character string", call. = FALSE)
     }
@@ -127,7 +139,12 @@ tti <- function(prompt,
     }
 
     # Dispatch to appropriate backend
-    if (backend == "diffusers_api") {
+    if (backend == "gpuhost") {
+        .tti_gpuhost(prompt = prompt, size = size, seed = seed,
+                     steps = if (steps_asked) steps else NULL,
+                     negative_prompt = negative_prompt, file = file,
+                     timeout = timeout)
+    } else if (backend == "diffusers_api") {
         .tti_diffusers_api(prompt = prompt, model = model,
                            negative_prompt = negative_prompt, size = size,
                            steps = steps, guidance_scale = guidance_scale,

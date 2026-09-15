@@ -69,7 +69,12 @@
 #'   Pass a fixed integer >= 0 for reproducible output / clean A/B comparisons.
 #' @param output Output file path (default \code{"transition_output.mp4"}).
 #' @param timeout Timeout in seconds (default 1800; transitions can be slow).
-#' @param backend Backend to use. Only \code{"wan2gp_api"} is supported.
+#' @param backend Backend to use: \code{"wan2gp_api"} (default),
+#'   \code{"diffuseR"} (LTX-2.3 in this process) or \code{"gpuhost"}
+#'   (LTX-2.3 on the viento-managed gpu.ctl service; see
+#'   \code{\link{stv}}). The last two implement the start-clip and
+#'   start-image shapes only -- no \code{end_image}, keyframes or sliding
+#'   window.
 #' @return Invisibly, the path to the written MP4. Note the clip has
 #'   \code{num_frames + conditioning_frames - 1} frames, not \code{num_frames}:
 #'   the server's \code{video_source} continuation prepends the conditioning tail
@@ -106,7 +111,7 @@ transition <- function(start_clip = NULL, image_start = NULL,
                        window = 129, resolution = "720p",
                        quality = "balanced", seed = NULL,
                        output = "transition_output.mp4", timeout = 1800,
-                       backend = c("wan2gp_api", "diffuseR")) {
+                       backend = c("wan2gp_api", "diffuseR", "gpuhost")) {
     .sidecar_arm(environment())
     backend <- match.arg(backend)
 
@@ -119,6 +124,17 @@ transition <- function(start_clip = NULL, image_start = NULL,
                                     fps = fps, resolution = resolution,
                                     quality = quality, seed = seed,
                                     output = output))
+    }
+
+    if (backend == "gpuhost") {
+        return(.transition_gpuhost(start_clip = start_clip,
+                                   image_start = image_start,
+                                   prompt = prompt, audio = audio,
+                                   num_frames = num_frames,
+                                   conditioning_frames = conditioning_frames,
+                                   fps = fps, resolution = resolution,
+                                   quality = quality, seed = seed,
+                                   output = output, timeout = timeout))
     }
 
     .transition_wan2gp_api(

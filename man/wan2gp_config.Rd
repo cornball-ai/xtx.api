@@ -3,8 +3,13 @@
 \alias{wan2gp_config}
 \title{Configure WanGP Settings}
 \usage{
-wan2gp_config(workspace = NULL, cache = NULL, output_dir = NULL,
-              profile = NULL, container = NULL)
+wan2gp_config(
+  workspace = NULL,
+  cache = NULL,
+  output_dir = NULL,
+  profile = NULL,
+  container = NULL
+)
 }
 \arguments{
 \item{workspace}{Path to Wan2GP workspace (default: "~/Wan2GP")}

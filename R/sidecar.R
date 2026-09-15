@@ -7,7 +7,9 @@
 # video to 8n+1 frames regardless of what was asked). The sidecar rides with
 # the media file: it survives any downstream bundle or timeline rebuild.
 # Convention shared across cornball.ai generation packages (cornball_sidecar
-# schema v1: package, version, fn, request, media, elapsed, created).
+# schema v1: package, version, fn, request, resolved, media, elapsed,
+# created). `resolved` is optional and backend-reported: what the backend
+# actually ran with, for the arguments it derived or ignored.
 
 # Arm a sidecar for the calling function: registers an on.exit hook that, on
 # return, writes <output>.json when the output file exists with an mtime at or
@@ -36,6 +38,37 @@
     do.call(on.exit, list(expr, add = TRUE), envir = env)
 }
 
+# Backend-reported facts, keyed by output path. The `request` block is the
+# public function's arguments, which is intent and nothing more: a backend is
+# free to ignore an argument entirely (stv()'s diffuseR path drops width,
+# height, num_frames, num_inference_steps and turbo_mode), and a sidecar that
+# records only the intent describes a generation that never happened. A
+# backend calls .sidecar_note() with what it actually resolved; it lands in
+# the record under `resolved`, next to the request that asked for it.
+.sidecar_resolved <- new.env(parent = emptyenv())
+
+.sidecar_note <- function(output, ...) {
+    key <- normalizePath(output, mustWork = FALSE)
+    prior <- .sidecar_resolved[[key]]
+    .sidecar_resolved[[key]] <- utils::modifyList(if (is.null(prior)) {
+        list()
+    } else {
+        prior
+    }, list(...))
+    invisible(NULL)
+}
+
+# Read and clear: notes are per-call, so a later call writing the same path
+# must not inherit them.
+.sidecar_take_notes <- function(output) {
+    key <- normalizePath(output, mustWork = FALSE)
+    notes <- .sidecar_resolved[[key]]
+    if (!is.null(notes)) {
+        rm(list = key, envir = .sidecar_resolved)
+    }
+    notes
+}
+
 # The on.exit half: snapshot the function's RESOLVED arguments (short atomics
 # only -- no raw payloads) and write the record next to the produced asset.
 .sidecar_finish <- function(fn, output_arg, env, started, arg_names) {
@@ -58,6 +91,7 @@
     rec <- list(cornball_sidecar = 1L, package = pkg,
                 version = as.character(utils::packageVersion(pkg)),
                 fn = fn, request = request,
+                resolved = .sidecar_take_notes(output),
                 media = .sidecar_media(output),
                 elapsed = if (!is.null(started)) {
             round(as.numeric(difftime(Sys.time(), started, units = "secs")), 2)

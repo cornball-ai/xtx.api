@@ -3,14 +3,30 @@
 \alias{stv}
 \title{Generate Talking Head Video (Speech-to-Video)}
 \usage{
-stv(image = NULL, audio, output = "stv_output.mp4",
-    backend = c("sadtalker", "wan2gp", "wan2gp_api", "diffuseR"), model = NULL,
-    face_id = NULL, enhance = FALSE, prompt = "Person speaking naturally",
-    resolution = "720p", quality = "balanced", width = 832L, height = 832L,
-    num_frames = 129L, num_inference_steps = 30L, turbo_mode = TRUE,
-    seed = NULL, device = "cuda", timeout = 600, sliding_window_size = NULL,
-    sliding_window_overlap = NULL, sliding_window_overlap_noise = NULL,
-    sliding_window_discard_last_frames = NULL)
+stv(
+  image = NULL,
+  audio,
+  output = "stv_output.mp4",
+  backend = c("sadtalker", "wan2gp", "wan2gp_api", "diffuseR", "gpuhost"),
+  model = NULL,
+  face_id = NULL,
+  enhance = FALSE,
+  prompt = "Person speaking naturally",
+  resolution = "720p",
+  quality = "balanced",
+  width = 832L,
+  height = 832L,
+  num_frames = 129L,
+  num_inference_steps = 30L,
+  turbo_mode = TRUE,
+  seed = NULL,
+  device = "cuda",
+  timeout = 600,
+  sliding_window_size = NULL,
+  sliding_window_overlap = NULL,
+  sliding_window_overlap_noise = NULL,
+  sliding_window_discard_last_frames = NULL
+)
 }
 \arguments{
 \item{image}{Path to portrait image (PNG/JPG, front-facing) or base64 string}
@@ -20,7 +36,13 @@ stv(image = NULL, audio, output = "stv_output.mp4",
 \item{output}{Path for output video file (default: "stv_output.mp4")}
 
 \item{backend}{Backend to use: "sadtalker" (default), "wan2gp" (Docker),
-or "wan2gp_api" (HTTP API)}
+"wan2gp_api" (HTTP API), "diffuseR" (LTX-2.3 in this process), or
+"gpuhost" (LTX-2.3 on the viento-managed gpu.ctl service, on ITS
+card rather than this one). For gpuhost set
+\code{options(xtx.gpuhost_base = "http://host:7878")}; the entry name is
+the endpoint's (\code{xtx.gpuhost_video_entry}, default
+\code{"ltx-2.3"}). Prefer it wherever a gpu.ctl host is resident: the
+in-process backend competes with it for the same device.}
 
 \item{model}{Model for wan2gp backend: "hunyuan" (real faces), "fantasy" (stylized),
 or "ltx2" (general). Ignored for sadtalker.}
