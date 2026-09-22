@@ -1,3 +1,14 @@
+# xtx.api 0.1.0.15
+
+* **The `wan2gp_api` clients follow the async job API.** The WanGP
+  container replaced its synchronous endpoints with the create/poll/download
+  job shape the hosted services use (`POST /v1/videos[/{i2v,avatar,
+  transition}]`, `GET /v1/videos/{id}`, `.../content`). `ttv()`, `itv()`,
+  `stv()` and `transition()` on the `wan2gp_api` backend now submit a job,
+  poll until it settles, and download the file; `timeout` is the whole
+  budget for the job to finish. Their arguments are unchanged. The shared
+  poll/download step is `.wan2gp_api_await()`.
+
 # xtx.api 0.1.0.14
 
 * **`stv(backend = "gpuhost")` and `transition(backend = "gpuhost")`:**

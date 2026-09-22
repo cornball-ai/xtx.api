@@ -3,7 +3,8 @@
 # Generate a short bridging clip between two pieces of video: continue from the
 # tail of a start clip, optionally arrive at a destination keyframe, and
 # optionally pass through interior keyframe anchors. Mirrors the itv/stv curl
-# shape. Talks to the FastAPI /transition endpoint in the Wan2GP_api container.
+# shape. Creates a job at the FastAPI /v1/videos/transition endpoint in the
+# Wan2GP_api container, then polls and downloads (see .wan2gp_api_await).
 
 #' Generate a Bridging / Transition Clip (Video-to-Video)
 #'
@@ -196,7 +197,7 @@ transition <- function(start_clip = NULL, image_start = NULL,
     getOption("xtx.transition.conditioning_frames")
 
     base <- .wan2gp_api_get_base()
-    url <- paste0(base, "/transition")
+    url <- paste0(base, "/v1/videos/transition")
 
     # Start conditioning: a start image (prompt-type S) or a start clip's tail
     # (V). Exactly one is required.
@@ -258,14 +259,6 @@ transition <- function(start_clip = NULL, image_start = NULL,
              call. = FALSE)
     }
 
-    # Build multipart form
-    h <- curl::new_handle()
-    curl::handle_setopt(h,
-                        timeout = timeout,
-                        low_speed_time = 0, # Disable low-speed timeout (generation is slow)
-                        low_speed_limit = 0
-    )
-
     # wgp.py rejects an empty prompt (the task is skipped, surfacing as a 500), so
     # fall back to a generic transition prompt when the caller gives none.
     form_args <- list(
@@ -321,29 +314,9 @@ transition <- function(start_clip = NULL, image_start = NULL,
     if (!is.null(seed)) {
         form_args$seed <- as.character(seed)
     }
-    do.call(curl::handle_setform, c(list(h), form_args))
-
-    message("Calling WanGP API (LTX-2) for transition generation...")
-
-    response <- tryCatch(
-                         curl::curl_fetch_memory(url, handle = h),
-                         error = function(e) {
-        stop("Connection to WanGP API failed: ", e$message, call. = FALSE)
-    }
-    )
-
-    status <- response$status_code
-    if (status >= 400) {
-        err_content <- rawToChar(response$content)
-        err_msg <- tryCatch({
-            parsed <- jsonlite::fromJSON(err_content)
-            parsed$detail$message %||% parsed$detail %||% parsed$error %||% err_content
-        }, error = function(e) err_content)
-        stop("WanGP API error (", status, "): ", err_msg, call. = FALSE)
-    }
-
-    # Write video to output file
-    writeBin(response$content, output)
+    message("Requesting WanGP API (LTX-2) transition generation...")
+    created <- .wan2gp_api_post_form(url, form_args)
+    .wan2gp_api_await(base, created, output, timeout)
     message("Transition video saved to: ", output)
 
     invisible(output)
