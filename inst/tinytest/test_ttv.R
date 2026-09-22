@@ -71,3 +71,49 @@ local({
                                                    poll_interval = 0)),
         "no GPU")
 })
+
+# --- the file-input clients post to the new /v1/videos/{...} paths --------
+orig_post_form <- xtx.api:::.wan2gp_api_post_form
+orig_get2 <- xtx.api:::.wan2gp_api_get
+
+local({
+    on.exit({
+        assignInNamespace(".wan2gp_api_post_form", orig_post_form, "xtx.api")
+        assignInNamespace(".wan2gp_api_get", orig_get2, "xtx.api")
+    }, add = TRUE)
+
+    options(xtx.wan2gp_api_base = "http://test:8000")
+    seen <- new.env()
+    seen$url <- NULL
+    assignInNamespace(".wan2gp_api_post_form",
+                      function(url, form_args, timeout = 300) {
+                          seen$url <- url
+                          resp(202, json_raw(list(id = "vid_1", status = "queued")))
+                      }, "xtx.api")
+    assignInNamespace(".wan2gp_api_get", function(url, timeout = 30) {
+        if (grepl("/content$", url)) return(resp(200, as.raw(c(1, 2, 3, 4))))
+        resp(200, json_raw(list(id = "vid_1", status = "completed")))
+    }, "xtx.api")
+
+    img <- tempfile(fileext = ".png")
+    writeBin(as.raw(rep(0, 8)), img)
+    aud <- tempfile(fileext = ".wav")
+    writeBin(as.raw(rep(0, 8)), aud)
+    clip <- tempfile(fileext = ".mp4")
+    writeBin(as.raw(rep(0, 8)), clip)
+
+    out <- tempfile(fileext = ".mp4")
+    suppressMessages(xtx.api:::.i2v_wan2gp_api(image = img, output = out))
+    expect_equal(seen$url, "http://test:8000/v1/videos/i2v")
+    expect_equal(readBin(out, "raw", 4), as.raw(c(1, 2, 3, 4)))
+
+    out <- tempfile(fileext = ".mp4")
+    suppressMessages(xtx.api:::.stv_wan2gp_api(image = img, audio = aud, output = out))
+    expect_equal(seen$url, "http://test:8000/v1/videos/avatar")
+
+    out <- tempfile(fileext = ".mp4")
+    suppressMessages(
+        xtx.api:::.transition_wan2gp_api(start_clip = clip, output = out))
+    expect_equal(seen$url, "http://test:8000/v1/videos/transition")
+    expect_true(file.exists(out))
+})
