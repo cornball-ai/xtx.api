@@ -570,43 +570,105 @@ stv_face_delete <- function(face_id) {
 
 #' Text-to-video via WanGP API
 #'
-#' Internal function for t2v endpoint. Uses LTX-2 19B.
+#' Extract an error message from a WanGP API response body.
 #'
+#' The API reports errors as JSON \code{{detail: {error, message}}}; fall
+#' back to the raw text when it is not JSON.
+#' @keywords internal
+.wan2gp_api_error_message <- function(content) {
+    txt <- tryCatch(rawToChar(content), error = function(e) "")
+    tryCatch({
+        parsed <- jsonlite::fromJSON(txt)
+        parsed$detail$message %||% parsed$detail %||% parsed$error %||% txt
+    }, error = function(e) txt)
+}
+
+#' GET a URL from the WanGP API, stopping on a connection failure.
+#' @keywords internal
+.wan2gp_api_get <- function(url, timeout = 30) {
+    h <- curl::new_handle()
+    curl::handle_setopt(h, timeout = timeout)
+    tryCatch(
+        curl::curl_fetch_memory(url, handle = h),
+        error = function(e) stop("Connection to WanGP API failed: ",
+                                 e$message, call. = FALSE)
+    )
+}
+
+#' POST a JSON body to the WanGP API, stopping on a connection failure.
+#' @keywords internal
+.wan2gp_api_post_json <- function(url, body, timeout = 60) {
+    h <- curl::new_handle()
+    curl::handle_setheaders(h, "Content-Type" = "application/json")
+    curl::handle_setopt(h, post = TRUE, postfields = body, timeout = timeout)
+    tryCatch(
+        curl::curl_fetch_memory(url, handle = h),
+        error = function(e) stop("Connection to WanGP API failed: ",
+                                 e$message, call. = FALSE)
+    )
+}
+
+#' Internal function for the t2v endpoint. Uses LTX-2.
+#'
+#' Generation holds the GPU for minutes, so the API is a job: create it,
+#' poll until it is done, then download the file. \code{timeout} is the
+#' whole budget for the job to complete, not a single request.
 #' @keywords internal
 .t2v_wan2gp_api <- function(prompt, output = "t2v_output.mp4",
                             num_frames = 97L, resolution = "720p",
-                            quality = "balanced", timeout = 600) {
+                            quality = "balanced", timeout = 600,
+                            poll_interval = 2) {
     base <- .wan2gp_api_get_base()
-    url <- paste0(base, "/t2v")
 
-    h <- curl::new_handle()
-    curl::handle_setopt(h, timeout = timeout, low_speed_time = 0,
-                        low_speed_limit = 0) # Disable low-speed timeout (quality mode is slow)
-
-    curl::handle_setform(h, prompt = prompt,
-                         num_frames = as.character(num_frames),
-                         resolution = resolution, quality = quality)
-
-    message("Calling WanGP API (LTX-2) for t2v generation...")
-
-    response <- tryCatch(
-                         curl::curl_fetch_memory(url, handle = h),
-                         error = function(e) {
-        stop("Connection to WanGP API failed: ", e$message, call. = FALSE)
-    }
+    # 1. Create the job. The API answers at once with an id and a status;
+    #    it does not hold the connection open for the generation.
+    body <- jsonlite::toJSON(
+        list(prompt = prompt, num_frames = num_frames,
+             resolution = resolution, quality = quality),
+        auto_unbox = TRUE
     )
-
-    status <- response$status_code
-    if (status >= 400) {
-        err_content <- rawToChar(response$content)
-        err_msg <- tryCatch({
-            parsed <- jsonlite::fromJSON(err_content)
-            parsed$detail$message %||% parsed$detail %||% parsed$error %||% err_content
-        }, error = function(e) err_content)
-        stop("WanGP API error (", status, "): ", err_msg, call. = FALSE)
+    message("Requesting WanGP API (LTX-2) t2v generation...")
+    created <- .wan2gp_api_post_json(paste0(base, "/v1/videos"), body)
+    if (created$status_code >= 400) {
+        stop("WanGP API error (", created$status_code, "): ",
+             .wan2gp_api_error_message(created$content), call. = FALSE)
+    }
+    job_id <- jsonlite::fromJSON(rawToChar(created$content))$id
+    if (is.null(job_id) || !nzchar(job_id)) {
+        stop("WanGP API did not return a job id.", call. = FALSE)
     }
 
-    writeBin(response$content, output)
+    # 2. Poll until the job settles or the budget runs out.
+    status_url <- paste0(base, "/v1/videos/", job_id)
+    deadline <- Sys.time() + timeout
+    repeat {
+        poll <- .wan2gp_api_get(status_url, timeout = 30)
+        if (poll$status_code >= 400) {
+            stop("WanGP API error (", poll$status_code, "): ",
+                 .wan2gp_api_error_message(poll$content), call. = FALSE)
+        }
+        state <- jsonlite::fromJSON(rawToChar(poll$content))
+        if (identical(state$status, "completed")) break
+        if (identical(state$status, "failed")) {
+            stop("WanGP API generation failed: ",
+                 state$error$message %||% "unknown error", call. = FALSE)
+        }
+        if (Sys.time() > deadline) {
+            stop("WanGP API t2v timed out after ", timeout, "s (job ",
+                 job_id, " still ", state$status %||% "unknown", ").",
+                 call. = FALSE)
+        }
+        Sys.sleep(poll_interval)
+    }
+
+    # 3. Download the finished mp4.
+    dl <- .wan2gp_api_get(paste0(base, "/v1/videos/", job_id, "/content"),
+                          timeout = 120)
+    if (dl$status_code >= 400) {
+        stop("WanGP API error (", dl$status_code, "): ",
+             .wan2gp_api_error_message(dl$content), call. = FALSE)
+    }
+    writeBin(dl$content, output)
     message("T2V video saved to: ", output)
 
     invisible(output)
