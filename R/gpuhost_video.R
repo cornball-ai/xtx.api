@@ -42,8 +42,12 @@
         filt <- paste0(filt, sprintf(",adelay=%dS:all=1",
                                      as.integer(round(lead_s * rate))))
     }
+    # Force the mp3 demuxer for mp3 inputs: ffmpeg can otherwise auto-detect a
+    # short re-encoded slice as a video stream and emit no audio. See
+    # .probe_duration() for the same guard.
+    fmt <- if (grepl("\\.mp3$", audio, ignore.case = TRUE)) c("-f", "mp3") else character()
     rc <- system2("ffmpeg",
-                  shQuote(c("-y", "-v", "error", "-i", audio, "-af", filt,
+                  shQuote(c("-y", "-v", "error", fmt, "-i", audio, "-af", filt,
                             "-c:a", "pcm_s16le", out)),
                   stdout = FALSE, stderr = FALSE)
     if (!identical(rc, 0L) || !file.exists(out)) {

@@ -154,8 +154,14 @@ transition <- function(start_clip = NULL, image_start = NULL,
 #' Duration of a media file in seconds via ffprobe (NA on failure)
 #' @keywords internal
 .probe_duration <- function(file) {
+    # Force the mp3 demuxer for mp3 inputs. A short re-encoded mp3 slice can
+    # score higher under ffmpeg's codec auto-detection as a video stream
+    # (VVC/HEVC), which shadows the real audio and makes format=duration read
+    # N/A. Naming the demuxer skips the guess. Non-mp3 inputs keep the generic
+    # probe so video files still work.
+    fmt <- if (grepl("\\.mp3$", file, ignore.case = TRUE)) c("-f", "mp3") else character()
     out <- suppressWarnings(system2("ffprobe",
-                                    shQuote(c("-v", "error", "-show_entries", "format=duration",
+                                    shQuote(c("-v", "error", fmt, "-show_entries", "format=duration",
                     "-of", "csv=p=0", file)), stdout = TRUE, stderr = FALSE))
     suppressWarnings(as.numeric(out[1]))
 }
