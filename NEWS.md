@@ -1,3 +1,13 @@
+# xtx.api 0.1.0.16
+
+* **Force the mp3 demuxer when reading chunk mp3s on the gpuhost backend.**
+  ffmpeg can misclassify a short re-encoded mp3 slice as a video stream
+  (VVC/HEVC) under codec auto-detection, shadowing the real audio so
+  `format=duration` reads `N/A` and the audio-to-wav step produces no stream.
+  `.probe_duration()` and `.gpuhost_audio_wav()` now pass `-f mp3` for `.mp3`
+  inputs, which names the demuxer instead of guessing. Non-mp3 inputs are
+  unchanged, so video probing is unaffected.
+
 # xtx.api 0.1.0.15
 
 * **The `wan2gp_api` clients follow the async job API.** The WanGP
