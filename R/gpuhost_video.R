@@ -79,6 +79,28 @@
     dims
 }
 
+# A video request that asks for its tail latents (`tail_latent_frames`) is
+# answered with one safetensors file holding two tensors: `video_mp4`, the
+# mp4 bytes as uint8, and `tail_latents`, the last k denoised latent frames
+# [1, 128, k, h, w]. One body keeps the clip and its carry from arriving
+# apart.
+.GPUHOST_VIDEO_LATENTS <- "application/vnd.gpuhost.video+safetensors"
+
+# Write the mp4 to `output` and the tail latents, re-wrapped as their own
+# safetensors file, beside it. Neither tensor is decoded: the latents go
+# back to the host as bytes on the next call.
+.gpuhost_split_latents <- function(bytes, output) {
+    parts <- .safetensors_split(bytes)
+    if (is.null(parts$video_mp4) || is.null(parts$tail_latents)) {
+        stop("gpuhost answer holds no video_mp4 and tail_latents tensors",
+             call. = FALSE)
+    }
+    writeBin(parts$video_mp4$data, output)
+    writeBin(.safetensors_join(list(latents = parts$tail_latents)),
+             .latents_path(output))
+    invisible(output)
+}
+
 # One video generation on the host: the closed input, the POST, the bytes
 # to `output`, the sidecar note. Both public paths end here.
 .gpuhost_video <- function(input, output, timeout, note = list()) {
@@ -88,8 +110,15 @@
     # swap catalog the host may first move a 27 GiB pin onto it. A caller
     # who asks for more gets more; nobody gets less than this.
     timeout <- max(timeout %||% 0, 600)
-    out <- .gpuhost_infer(entry, input, timeout = timeout, accept = "video/mp4")
-    writeBin(out$content, output)
+    if (is.null(input$tail_latent_frames)) {
+        out <- .gpuhost_infer(entry, input, timeout = timeout,
+                              accept = "video/mp4")
+        writeBin(out$content, output)
+    } else {
+        out <- .gpuhost_infer(entry, input, timeout = timeout,
+                              accept = .GPUHOST_VIDEO_LATENTS)
+        .gpuhost_split_latents(out$content, output)
+    }
     do.call(.sidecar_note,
             c(list(output, backend = "gpuhost", entry = entry,
                    width = input$width, height = input$height,
@@ -141,7 +170,9 @@
 .transition_gpuhost <- function(start_clip = NULL, image_start = NULL,
                                 prompt = NULL, audio = NULL,
                                 num_frames = NULL,
-                                conditioning_frames = NULL, fps = 24,
+                                conditioning_frames = NULL,
+                                carry = "pixels",
+                                audio_includes_head = FALSE, fps = 24,
                                 resolution = "720p", quality = "balanced",
                                 seed = NULL,
                                 output = "transition_output.mp4",
@@ -162,16 +193,11 @@
     prompt <- prompt %||% "smooth cinematic transition"
     conditioning_frames <- as.integer(conditioning_frames %||%
                                       getOption("xtx.transition.conditioning_frames", 9L))
-    if (is.null(num_frames) && !is.null(audio)) {
-        adur <- .probe_duration(audio)
-        if (!is.na(adur)) {
-            num_frames <- .ceil_8nplus1(round(adur * fps))
-        }
-    }
-    if (is.null(num_frames)) {
-        stop("num_frames is required (or provide audio to size from)",
-             call. = FALSE)
-    }
+    k <- if (carry == "latents") .carry_latent_frames(conditioning_frames)
+    fr <- .transition_frames(audio, num_frames, conditioning_frames, fps,
+                             audio_includes_head,
+                             continuation = !is.null(start_clip))
+    lead_s <- fr$lead_s
     input <- list(prompt = prompt)
     if (!is.null(seed)) {
         input$seed <- as.integer(seed)
@@ -186,13 +212,18 @@
         dims <- .probe_dims(start_clip)
         input$width <- dims[[1L]]
         input$height <- dims[[2L]]
-        input$num_frames <- .align_8nplus1(num_frames + conditioning_frames -
-            1L)
-        input$condition_video_b64 <- .gpuhost_b64(start_clip)
-        input$conditioning_frames <- conditioning_frames
-        # The head replays the previous chunk; this chunk's audio belongs to
-        # the generated portion, so it starts after the head.
-        lead_s <- (conditioning_frames - 1L) / fps
+        input$num_frames <- fr$total
+        if (carry == "latents") {
+            # The carried file goes as its bytes; the host checks the shape
+            # too, but a mismatch is cheaper to refuse here.
+            lat_path <- .latents_path(start_clip)
+            .latents_check(.latents_read(lat_path), k, dims[[1L]],
+                           dims[[2L]], lat_path)
+            input$condition_latents_b64 <- .gpuhost_b64(lat_path)
+        } else {
+            input$condition_video_b64 <- .gpuhost_b64(start_clip)
+            input$conditioning_frames <- conditioning_frames
+        }
         note$conditioning_frames <- conditioning_frames
         note$audio_lead_s <- lead_s
     } else {
@@ -202,9 +233,14 @@
         size <- .diffuseR_size(resolution)
         input$width <- size
         input$height <- size
-        input$num_frames <- as.integer(num_frames)
+        input$num_frames <- fr$total
         input$image_b64 <- .gpuhost_b64(image_start)
-        lead_s <- 0
+    }
+    if (carry == "latents") {
+        input$tail_latent_frames <- k
+        note$carry <- "latents"
+        note$carry_latent_frames <- k
+        note$audio_includes_head <- isTRUE(audio_includes_head)
     }
     if (!is.null(audio)) {
         wav <- .gpuhost_audio_wav(audio, lead_s = lead_s)

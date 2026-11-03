@@ -218,5 +218,52 @@ if (nzchar(Sys.which("ffmpeg")) && nzchar(Sys.which("ffprobe"))) {
     expect_error(with_capture(xtx.api::transition(
         start_clip = clip, audio = speech, output = nxt, fps = 30,
         backend = "gpuhost")), "24 fps")
+
+    ## latent carry: the first window asks for its tail latents, the next
+    ## sends them back as the file's bytes and covers its head with audio
+    ns <- asNamespace("xtx.api")
+    lat <- array(0.25, dim = c(1L, 128L, 4L, 2L, 3L))
+    lat_file <- tempfile(fileext = ".safetensors")
+    ns$.latents_write(lat, lat_file)
+    box <- ns$.safetensors_join(list(
+        video_mp4 = list(dtype = "U8", shape = length(mp4_1), data = mp4_1),
+        tail_latents = ns$.safetensors_split(
+            readBin(lat_file, "raw", file.size(lat_file)))$latents))
+    w1 <- file.path(td, "win01.mp4")
+    with_capture(xtx.api::transition(image_start = png, audio = speech,
+                                     output = w1, conditioning_frames = 25,
+                                     carry = "latents",
+                                     audio_includes_head = TRUE,
+                                     backend = "gpuhost"), content = box)
+    expect_equal(sent$accept, "application/vnd.gpuhost.video+safetensors")
+    expect_equal(sent$input$tail_latent_frames, 4L)
+    expect_equal(sent$input$num_frames, 41L)
+    expect_equal(readBin(w1, "raw", 12L), mp4_1)
+    expect_true(file.exists(paste0(w1, ".latents.safetensors")))
+    ## the fixture clip is 96x64, so its carry is [1, 128, 4, 2, 3]
+    file.copy(paste0(w1, ".latents.safetensors"),
+              paste0(clip, ".latents.safetensors"))
+    w2 <- file.path(td, "win02.mp4")
+    with_capture(xtx.api::transition(start_clip = clip, audio = speech,
+                                     output = w2, num_frames = 73,
+                                     conditioning_frames = 25,
+                                     carry = "latents",
+                                     audio_includes_head = TRUE,
+                                     backend = "gpuhost"), content = box)
+    expect_equal(sent$input$condition_latents_b64,
+                 b64_of(paste0(clip, ".latents.safetensors")))
+    expect_false("condition_video_b64" %in% names(sent$input))
+    expect_false("conditioning_frames" %in% names(sent$input))
+    expect_equal(sent$input$num_frames, 97L)
+    expect_equal(sent$input$tail_latent_frames, 4L)
+    ## no silence in front: the audio is the window's own
+    expect_equal(xtx.api:::.probe_duration(sent_wav()), 1.5, tolerance = 0.01)
+    ## a carry that does not fit the clip is refused before the POST
+    ns$.latents_write(array(0, dim = c(1L, 128L, 4L, 3L, 3L)),
+                      paste0(clip, ".latents.safetensors"))
+    expect_error(with_capture(xtx.api::transition(
+        start_clip = clip, audio = speech, output = w2, num_frames = 73,
+        conditioning_frames = 25, carry = "latents", backend = "gpuhost"),
+        content = box), "needs")
     unlink(td, recursive = TRUE)
 }

@@ -306,17 +306,35 @@ diffuseR_unload <- function() {
     invisible(output)
 }
 
+# A continuation's head replays the previous chunk. When this chunk's audio
+# belongs to the generated portion only, it is delayed by the head
+# (silence under the conditioning frames), so that after the consumer
+# trims the head, audio and video align. lead_s = 0 passes the file
+# through.
+.diffuseR_lead_audio <- function(audio, lead_s) {
+    if (is.null(audio) || lead_s <= 0) {
+        return(audio)
+    }
+    wav <- diffuseR::ltx23_read_audio(audio)
+    cbind(matrix(0, nrow = 2L, ncol = round(lead_s * 16000)), wav)
+}
+
 #' transition() via diffuseR: continue a clip's tail, audio-driven
 #'
 #' Matches the wan2gp_api contract: the output contains
 #' \code{conditioning_frames} overlap frames from \code{start_clip}
 #' followed by the generated continuation (total
-#' \code{num_frames + conditioning_frames - 1} frames).
+#' \code{num_frames + conditioning_frames - 1} frames). With
+#' \code{carry = "latents"} the head is pinned from
+#' \code{<start_clip>.latents.safetensors} and this chunk's own tail
+#' latents go to \code{<output>.latents.safetensors}.
 #' @keywords internal
 .transition_diffuseR <- function(start_clip = NULL, image_start = NULL,
                                  prompt = NULL, audio = NULL,
                                  num_frames = NULL,
-                                 conditioning_frames = NULL, fps = 24,
+                                 conditioning_frames = NULL,
+                                 carry = "pixels",
+                                 audio_includes_head = FALSE, fps = 24,
                                  resolution = "720p", quality = "balanced",
                                  seed = NULL,
                                  output = "transition_output.mp4",
@@ -325,18 +343,48 @@ diffuseR_unload <- function() {
         stop("Provide start_clip or image_start", call. = FALSE)
     }
     prompt <- prompt %||% "smooth cinematic transition"
-    conditioning_frames <- conditioning_frames %||%
-    getOption("xtx.transition.conditioning_frames", 9L)
+    conditioning_frames <- as.integer(conditioning_frames %||%
+                                      getOption("xtx.transition.conditioning_frames", 9L))
+    k <- if (carry == "latents") .carry_latent_frames(conditioning_frames)
+    fr <- .transition_frames(audio, num_frames, conditioning_frames, fps,
+                             audio_includes_head,
+                             continuation = !is.null(start_clip))
 
-    if (is.null(num_frames) && !is.null(audio)) {
-        adur <- .probe_duration(audio)
-        if (!is.na(adur)) {
-            num_frames <- .ceil_8nplus1(round(adur * fps))
+    if (carry == "latents") {
+        if (!is.null(start_clip)) {
+            dims <- .probe_dims(start_clip)
+            lat_path <- .latents_path(start_clip)
+            lat <- .latents_check(.latents_read(lat_path), k, dims[1],
+                                  dims[2], lat_path)
         }
-    }
-    if (is.null(num_frames)) {
-        stop("num_frames is required (or provide audio to size from)",
-             call. = FALSE)
+        pipe <- .diffuseR_pipeline()
+        cemb <- .diffuseR_connector_embeds(prompt)
+        size <- .diffuseR_size(resolution)
+        args <- list(prompt = prompt, pipeline = pipe,
+                     connector_embeds = cemb,
+                     audio = .diffuseR_lead_audio(audio, fr$lead_s),
+                     width = size, height = size, num_frames = fr$total,
+                     frame_rate = fps, seed = seed, device = "cuda",
+                     dtype = "bfloat16", filename = output,
+                     verbose = getOption("xtx.diffuseR.verbose", "progress"))
+        if (!is.null(start_clip)) {
+            args$width <- dims[1]
+            args$height <- dims[2]
+            args$condition_latents <- torch::torch_tensor(
+                lat, dtype = torch::torch_float32())
+        } else {
+            args$image <- image_start
+        }
+        res <- do.call(diffuseR::txt2vid_ltx2, args)
+        tail <- diffuseR::ltx23_tail_latents(res, k)
+        .latents_write(as.array(tail$to(device = "cpu")),
+                       .latents_path(output))
+        .sidecar_note(output, carry = "latents",
+                      conditioning_frames = conditioning_frames,
+                      carry_latent_frames = k,
+                      audio_includes_head = isTRUE(audio_includes_head),
+                      num_frames_total = fr$total, audio_lead_s = fr$lead_s)
+        return(invisible(output))
     }
 
     pipe <- .diffuseR_pipeline()
@@ -362,19 +410,8 @@ diffuseR_unload <- function() {
                     stdout = TRUE, stderr = FALSE))
             dims <- as.integer(strsplit(info[1], ",")[[1]])
         }
-        total_frames <- .align_8nplus1(num_frames + conditioning_frames - 1L)
-
-        # The overlap head replays the previous chunk; this chunk's
-        # audio belongs to the generated portion, so delay it by the
-        # overlap duration (silence under the conditioning frames).
-        # After the consumer trims the head, audio and video align.
-        cond_audio <- audio
-        if (!is.null(audio)) {
-            wav <- diffuseR::ltx23_read_audio(audio)
-            lead <- matrix(0, nrow = 2L,
-                           ncol = round((conditioning_frames - 1L) / fps * 16000))
-            cond_audio <- cbind(lead, wav)
-        }
+        total_frames <- fr$total
+        cond_audio <- .diffuseR_lead_audio(audio, fr$lead_s)
         res <- diffuseR::txt2vid_ltx2(
                                       prompt = prompt,
                                       pipeline = pipe,
@@ -399,7 +436,7 @@ diffuseR_unload <- function() {
                                       image = image_start,
                                       audio = audio,
                                       width = size, height = size,
-                                      num_frames = num_frames, frame_rate = fps,
+                                      num_frames = fr$total, frame_rate = fps,
                                       seed = seed,
                                       device = "cuda", dtype = "bfloat16",
                                       filename = output,

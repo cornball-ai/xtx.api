@@ -10,6 +10,8 @@
   audio = NULL,
   num_frames = NULL,
   conditioning_frames = NULL,
+  carry = "pixels",
+  audio_includes_head = FALSE,
   fps = 24,
   resolution = "720p",
   quality = "balanced",
@@ -22,6 +24,9 @@
 Matches the wan2gp_api contract: the output contains
 \code{conditioning_frames} overlap frames from \code{start_clip}
 followed by the generated continuation (total
-\code{num_frames + conditioning_frames - 1} frames).
+\code{num_frames + conditioning_frames - 1} frames). With
+\code{carry = "latents"} the head is pinned from
+\code{<start_clip>.latents.safetensors} and this chunk's own tail
+latents go to \code{<output>.latents.safetensors}.
 }
 \keyword{internal}
