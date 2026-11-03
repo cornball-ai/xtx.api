@@ -10,6 +10,8 @@
   audio = NULL,
   num_frames = NULL,
   conditioning_frames = NULL,
+  carry = "pixels",
+  audio_includes_head = FALSE,
   fps = 24,
   resolution = "720p",
   quality = "balanced",

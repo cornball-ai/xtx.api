@@ -54,6 +54,25 @@
 #'   to \code{getOption("xtx.transition.conditioning_frames")} then the server
 #'   default. Set per-box prefs in \code{~/.Rprofile}, e.g.
 #'   \code{options(xtx.transition.num_frames = 49, xtx.transition.conditioning_frames = 9)}.
+#' @param carry What carries the overlap from \code{start_clip}:
+#'   \code{"pixels"} (default) VAE-encodes its last
+#'   \code{conditioning_frames} decoded frames; \code{"latents"} pins the
+#'   previous chunk's last \code{(conditioning_frames - 1) / 8 + 1}
+#'   denoised latent frames, read from
+#'   \code{<start_clip>.latents.safetensors}, with no decode or re-encode.
+#'   With \code{"latents"} every call also writes
+#'   \code{<output>.latents.safetensors} for the next one, so a resumed
+#'   chain picks up from the files. The carried head decodes close to,
+#'   not identical to, the previous chunk's tail (the first carried latent
+#'   decodes as a clip's first frame), so join such chunks with a
+#'   crossfade over the whole head rather than a cut. \code{"diffuseR"}
+#'   and \code{"gpuhost"} backends only.
+#' @param audio_includes_head If TRUE, \code{audio} covers the whole
+#'   output, replayed head included, and is used as is. If FALSE
+#'   (default), \code{audio} covers only the new frames and silence is
+#'   put under the head. With TRUE and no \code{num_frames}, the output
+#'   is sized to the audio and \code{num_frames} becomes the new frames
+#'   after the head. \code{"diffuseR"} and \code{"gpuhost"} backends only.
 #' @param fill_window If TRUE, pad \code{conditioning_frames} to
 #'   \code{window - num_frames} so every call feeds the model a full
 #'   \code{window}-frame context (clamped to a valid range). Same diffusion cost
@@ -104,7 +123,9 @@ transition <- function(start_clip = NULL, image_start = NULL,
                        end_image = NULL, keyframe_images = NULL,
                        keyframe_positions = NULL, prompt = NULL,
                        audio = NULL, num_frames = NULL,
-                       conditioning_frames = NULL, fill_window = FALSE,
+                       conditioning_frames = NULL,
+                       carry = c("pixels", "latents"),
+                       audio_includes_head = FALSE, fill_window = FALSE,
                        sliding_window_size = NULL,
                        sliding_window_overlap = NULL,
                        sliding_window_overlap_noise = NULL,
@@ -115,6 +136,7 @@ transition <- function(start_clip = NULL, image_start = NULL,
                        backend = c("wan2gp_api", "diffuseR", "gpuhost")) {
     .sidecar_arm(environment())
     backend <- match.arg(backend)
+    carry <- match.arg(carry)
 
     if (backend == "diffuseR") {
         return(.transition_diffuseR(start_clip = start_clip,
@@ -122,6 +144,8 @@ transition <- function(start_clip = NULL, image_start = NULL,
                                     prompt = prompt, audio = audio,
                                     num_frames = num_frames,
                                     conditioning_frames = conditioning_frames,
+                                    carry = carry,
+                                    audio_includes_head = audio_includes_head,
                                     fps = fps, resolution = resolution,
                                     quality = quality, seed = seed,
                                     output = output))
@@ -133,9 +157,16 @@ transition <- function(start_clip = NULL, image_start = NULL,
                                    prompt = prompt, audio = audio,
                                    num_frames = num_frames,
                                    conditioning_frames = conditioning_frames,
+                                   carry = carry,
+                                   audio_includes_head = audio_includes_head,
                                    fps = fps, resolution = resolution,
                                    quality = quality, seed = seed,
                                    output = output, timeout = timeout))
+    }
+
+    if (carry != "pixels" || isTRUE(audio_includes_head)) {
+        stop("carry = \"latents\" and audio_includes_head = TRUE need the ",
+             "\"diffuseR\" or \"gpuhost\" backend", call. = FALSE)
     }
 
     .transition_wan2gp_api(
@@ -154,8 +185,14 @@ transition <- function(start_clip = NULL, image_start = NULL,
 #' Duration of a media file in seconds via ffprobe (NA on failure)
 #' @keywords internal
 .probe_duration <- function(file) {
+    # Force the mp3 demuxer for mp3 inputs. A short re-encoded mp3 slice can
+    # score higher under ffmpeg's codec auto-detection as a video stream
+    # (VVC/HEVC), which shadows the real audio and makes format=duration read
+    # N/A. Naming the demuxer skips the guess. Non-mp3 inputs keep the generic
+    # probe so video files still work.
+    fmt <- if (grepl("\\.mp3$", file, ignore.case = TRUE)) c("-f", "mp3") else character()
     out <- suppressWarnings(system2("ffprobe",
-                                    shQuote(c("-v", "error", "-show_entries", "format=duration",
+                                    shQuote(c("-v", "error", fmt, "-show_entries", "format=duration",
                     "-of", "csv=p=0", file)), stdout = TRUE, stderr = FALSE))
     suppressWarnings(as.numeric(out[1]))
 }
@@ -172,6 +209,43 @@ transition <- function(start_clip = NULL, image_start = NULL,
 #' contaminated the conditioning-head measurement downstream).
 #' @keywords internal
 .ceil_8nplus1 <- function(n) max(9L, as.integer(8 * ceiling((n - 1) / 8) + 1))
+
+#' Frame count and audio lead for a diffuseR or gpuhost transition
+#'
+#' A continuation renders \code{num_frames} new frames after a
+#' \code{conditioning_frames} head, \code{num_frames + conditioning_frames - 1}
+#' in all, and its audio is delayed by the head unless
+#' \code{audio_includes_head}; then the audio covers the whole clip and,
+#' with no \code{num_frames}, sizes it. A start from a still has no head.
+#' @return \code{list(total, lead_s)}: frames to render and seconds of
+#'   silence to put in front of the audio.
+#' @keywords internal
+.transition_frames <- function(audio, num_frames, conditioning_frames, fps,
+                               audio_includes_head, continuation) {
+    adur <- if (is.null(audio)) NA_real_ else .probe_duration(audio)
+    head_audio <- continuation && isTRUE(audio_includes_head)
+    if (is.null(num_frames) && !is.na(adur)) {
+        audio_frames <- .ceil_8nplus1(round(adur * fps))
+        if (head_audio) {
+            if (audio_frames <= conditioning_frames) {
+                stop("the audio covers ", audio_frames, " frames, no more ",
+                     "than the ", conditioning_frames, "-frame head",
+                     call. = FALSE)
+            }
+            return(list(total = audio_frames, lead_s = 0))
+        }
+        num_frames <- audio_frames
+    }
+    if (is.null(num_frames)) {
+        stop("num_frames is required (or provide audio to size from)",
+             call. = FALSE)
+    }
+    if (!continuation) {
+        return(list(total = as.integer(num_frames), lead_s = 0))
+    }
+    list(total = .align_8nplus1(num_frames + conditioning_frames - 1L),
+         lead_s = if (head_audio) 0 else (conditioning_frames - 1L) / fps)
+}
 
 #' WanGP API Transition Backend
 #' @keywords internal

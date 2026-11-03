@@ -13,6 +13,8 @@ transition(
   audio = NULL,
   num_frames = NULL,
   conditioning_frames = NULL,
+  carry = c("pixels", "latents"),
+  audio_includes_head = FALSE,
   fill_window = FALSE,
   sliding_window_size = NULL,
   sliding_window_overlap = NULL,
@@ -62,6 +64,27 @@ conditioning (free context, not diffused). \code{NULL} (default) falls back
 to \code{getOption("xtx.transition.conditioning_frames")} then the server
 default. Set per-box prefs in \code{~/.Rprofile}, e.g.
 \code{options(xtx.transition.num_frames = 49, xtx.transition.conditioning_frames = 9)}.}
+
+\item{carry}{What carries the overlap from \code{start_clip}:
+\code{"pixels"} (default) VAE-encodes its last
+\code{conditioning_frames} decoded frames; \code{"latents"} pins the
+previous chunk's last \code{(conditioning_frames - 1) / 8 + 1}
+denoised latent frames, read from
+\code{<start_clip>.latents.safetensors}, with no decode or re-encode.
+With \code{"latents"} every call also writes
+\code{<output>.latents.safetensors} for the next one, so a resumed
+chain picks up from the files. The carried head decodes close to,
+not identical to, the previous chunk's tail (the first carried latent
+decodes as a clip's first frame), so join such chunks with a
+crossfade over the whole head rather than a cut. \code{"diffuseR"}
+and \code{"gpuhost"} backends only.}
+
+\item{audio_includes_head}{If TRUE, \code{audio} covers the whole
+output, replayed head included, and is used as is. If FALSE
+(default), \code{audio} covers only the new frames and silence is
+put under the head. With TRUE and no \code{num_frames}, the output
+is sized to the audio and \code{num_frames} becomes the new frames
+after the head. \code{"diffuseR"} and \code{"gpuhost"} backends only.}
 
 \item{fill_window}{If TRUE, pad \code{conditioning_frames} to
 \code{window - num_frames} so every call feeds the model a full

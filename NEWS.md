@@ -1,3 +1,27 @@
+# xtx.api 0.1.0.17
+
+* **`transition(carry = "latents")` chains LTX chunks on denoised latents.**
+  The next chunk is pinned to the previous one's last
+  `(conditioning_frames - 1) / 8 + 1` latent frames, the way Lightricks'
+  `ltx-pipelines` chunking does, instead of re-encoding its decoded (and,
+  on the gpuhost backend, H.264-compressed) tail. The tail travels in
+  `<chunk>.latents.safetensors`, written by every latent-carry call, so a
+  resumed chain picks up from disk. `audio_includes_head = TRUE` takes
+  audio covering the whole window, head included, with no silent lead.
+  `"diffuseR"` and `"gpuhost"` backends only; the gpuhost path needs
+  gpu.ctl 0.1.0.41 (`condition_latents_b64`, `tail_latent_frames`).
+  Defaults are unchanged.
+
+# xtx.api 0.1.0.16
+
+* **Force the mp3 demuxer when reading chunk mp3s on the gpuhost backend.**
+  ffmpeg can misclassify a short re-encoded mp3 slice as a video stream
+  (VVC/HEVC) under codec auto-detection, shadowing the real audio so
+  `format=duration` reads `N/A` and the audio-to-wav step produces no stream.
+  `.probe_duration()` and `.gpuhost_audio_wav()` now pass `-f mp3` for `.mp3`
+  inputs, which names the demuxer instead of guessing. Non-mp3 inputs are
+  unchanged, so video probing is unaffected.
+
 # xtx.api 0.1.0.15
 
 * **The `wan2gp_api` clients follow the async job API.** The WanGP
