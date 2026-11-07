@@ -1,3 +1,12 @@
+# xtx.api 0.1.0.18
+
+* **`transition()` gains `width`/`height` for landscape gpuhost output.** The
+  timeline latent-carry path sized its first window from the square
+  `resolution` preset, locking the whole chain to 960x960. `width`/`height`
+  (defaulting to `NULL`, which keeps the square preset) now set the first
+  window, so a caller can render 1280x704 or any `/32` landscape with the carry
+  intact.
+
 # xtx.api 0.1.0.17
 
 * **`transition(carry = "latents")` chains LTX chunks on denoised latents.**
