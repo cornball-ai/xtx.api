@@ -176,7 +176,7 @@
                                 resolution = "720p", quality = "balanced",
                                 seed = NULL,
                                 output = "transition_output.mp4",
-                                timeout = 1800) {
+                                timeout = 1800, width = NULL, height = NULL) {
     if (is.null(start_clip) && is.null(image_start)) {
         stop("Provide start_clip or image_start", call. = FALSE)
     }
@@ -231,8 +231,16 @@
             stop("image_start file not found: ", image_start, call. = FALSE)
         }
         size <- .diffuseR_size(resolution)
-        input$width <- size
-        input$height <- size
+        dims <- list(width = width %||% size, height = height %||% size)
+        for (name in names(dims)) {
+            value <- dims[[name]]
+            if (!is.numeric(value) || length(value) != 1L ||
+                !is.finite(value) || value <= 0 ||
+                value > .Machine$integer.max || value %% 32 != 0) {
+                stop(name, " must be a positive multiple of 32", call. = FALSE)
+            }
+            input[[name]] <- as.integer(value)
+        }
         input$num_frames <- fr$total
         input$image_b64 <- .gpuhost_b64(image_start)
     }

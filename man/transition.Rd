@@ -27,7 +27,9 @@ transition(
   seed = NULL,
   output = "transition_output.mp4",
   timeout = 1800,
-  backend = c("wan2gp_api", "diffuseR", "gpuhost")
+  backend = c("wan2gp_api", "diffuseR", "gpuhost"),
+  width = NULL,
+  height = NULL
 )
 }
 \arguments{
@@ -115,6 +117,10 @@ defers to the server). Only engaged when \code{num_frames > window}.}
 
 \item{fps,window}{Frame rate (default 24) and LTX-2 window size in frames
 (default 129) used for audio-sizing and \code{fill_window} math.}
+
+\item{width,height}{Optional positive multiples of 32 for a start image
+with \code{backend = "gpuhost"}. Each omitted dimension uses the
+\code{resolution} preset. Continuations inherit the source clip's size.}
 }
 \value{
 Invisibly, the path to the written MP4. Note the clip has

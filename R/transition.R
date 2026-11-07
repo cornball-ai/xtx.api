@@ -83,6 +83,9 @@
 #' @param fps,window Frame rate (default 24) and LTX-2 window size in frames
 #'   (default 129) used for audio-sizing and \code{fill_window} math.
 #' @param resolution \code{"480p"} or \code{"720p"} (default \code{"720p"}).
+#' @param width,height Optional positive multiples of 32 for a start image
+#'   with \code{backend = "gpuhost"}. Each omitted dimension uses the
+#'   \code{resolution} preset. Continuations inherit the source clip's size.
 #' @param quality \code{"fast"}, \code{"balanced"}, or \code{"quality"}
 #'   (default \code{"balanced"}).
 #' @param seed Random seed. \code{NULL} (default) defers to the server (random).
@@ -133,10 +136,15 @@ transition <- function(start_clip = NULL, image_start = NULL,
                        window = 129, resolution = "720p",
                        quality = "balanced", seed = NULL,
                        output = "transition_output.mp4", timeout = 1800,
-                       backend = c("wan2gp_api", "diffuseR", "gpuhost")) {
+                       backend = c("wan2gp_api", "diffuseR", "gpuhost"),
+                       width = NULL, height = NULL) {
     .sidecar_arm(environment())
     backend <- match.arg(backend)
     carry <- match.arg(carry)
+
+    if ((!is.null(width) || !is.null(height)) && backend != "gpuhost") {
+        stop("width and height require backend = \"gpuhost\"", call. = FALSE)
+    }
 
     if (backend == "diffuseR") {
         return(.transition_diffuseR(start_clip = start_clip,
@@ -160,6 +168,7 @@ transition <- function(start_clip = NULL, image_start = NULL,
                                    carry = carry,
                                    audio_includes_head = audio_includes_head,
                                    fps = fps, resolution = resolution,
+                                   width = width, height = height,
                                    quality = quality, seed = seed,
                                    output = output, timeout = timeout))
     }
