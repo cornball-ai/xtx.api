@@ -131,6 +131,7 @@ transition <- function(start_clip = NULL, image_start = NULL,
                        sliding_window_overlap_noise = NULL,
                        sliding_window_discard_last_frames = NULL, fps = 24,
                        window = 129, resolution = "720p",
+                       width = NULL, height = NULL,
                        quality = "balanced", seed = NULL,
                        output = "transition_output.mp4", timeout = 1800,
                        backend = c("wan2gp_api", "diffuseR", "gpuhost")) {
@@ -160,6 +161,7 @@ transition <- function(start_clip = NULL, image_start = NULL,
                                    carry = carry,
                                    audio_includes_head = audio_includes_head,
                                    fps = fps, resolution = resolution,
+                                   width = width, height = height,
                                    quality = quality, seed = seed,
                                    output = output, timeout = timeout))
     }

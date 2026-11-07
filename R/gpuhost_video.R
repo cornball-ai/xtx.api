@@ -173,7 +173,8 @@
                                 conditioning_frames = NULL,
                                 carry = "pixels",
                                 audio_includes_head = FALSE, fps = 24,
-                                resolution = "720p", quality = "balanced",
+                                resolution = "720p", width = NULL,
+                                height = NULL, quality = "balanced",
                                 seed = NULL,
                                 output = "transition_output.mp4",
                                 timeout = 1800) {
@@ -231,8 +232,8 @@
             stop("image_start file not found: ", image_start, call. = FALSE)
         }
         size <- .diffuseR_size(resolution)
-        input$width <- size
-        input$height <- size
+        input$width <- as.integer(width %||% size)
+        input$height <- as.integer(height %||% size)
         input$num_frames <- fr$total
         input$image_b64 <- .gpuhost_b64(image_start)
     }
