@@ -17,7 +17,9 @@
   quality = "balanced",
   seed = NULL,
   output = "transition_output.mp4",
-  timeout = 1800
+  timeout = 1800,
+  width = NULL,
+  height = NULL
 )
 }
 \description{

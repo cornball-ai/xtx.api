@@ -214,6 +214,40 @@ if (nzchar(Sys.which("ffmpeg")) && nzchar(Sys.which("ffprobe"))) {
     expect_false("conditioning_frames" %in% names(sent$input))
     expect_equal(xtx.api:::.probe_duration(sent_wav()), 1.5, tolerance = 0.01)
 
+    ## A start image keeps the square default, or accepts an explicit shape.
+    expect_equal(sent$input$width, 960L)
+    expect_equal(sent$input$height, 960L)
+    with_capture(xtx.api::transition(image_start = png, audio = speech,
+        output = nxt, backend = "gpuhost", width = 1280, height = 704),
+        content = mp4_1)
+    expect_equal(sent$input$width, 1280L)
+    expect_equal(sent$input$height, 704L)
+    expect_equal(sent$input$image_b64, b64_of(png))
+    expect_equal(readBin(nxt, "raw", 12L), mp4_1)
+    with_capture(xtx.api::transition(image_start = png, num_frames = 9L,
+        output = nxt, backend = "gpuhost", width = 1280), content = mp4_1)
+    expect_equal(sent$input$width, 1280L)
+    expect_equal(sent$input$height, 960L)
+    for (bad in list(0, 31, 1280.5, NA_real_, Inf, numeric(), c(64, 96), "1280")) {
+        expect_error(with_capture(xtx.api::transition(image_start = png,
+            num_frames = 9L, output = nxt, backend = "gpuhost", width = bad)),
+            "width must be a positive multiple of 32")
+        expect_null(sent)
+    }
+    expect_error(xtx.api::transition(image_start = png, width = 1280,
+        backend = "diffuseR"), "require backend")
+
+    ## Calls using the old positional signature must keep their meaning.
+    legacy <- list(NULL, png, NULL, NULL, NULL, "legacy positional call",
+        speech, NULL, NULL, "pixels", FALSE, FALSE, NULL, NULL, NULL, NULL,
+        24, 129, "720p", "balanced", 7L, nxt, 1800, "gpuhost")
+    with_capture(do.call(xtx.api::transition, legacy), content = mp4_1)
+    expect_equal(sent$input$prompt, "legacy positional call")
+    expect_equal(sent$input$seed, 7L)
+    expect_equal(sent$input$width, 960L)
+    expect_equal(sent$input$height, 960L)
+    expect_equal(readBin(nxt, "raw", 12L), mp4_1)
+
     ## the host renders at 24 fps; another rate cannot be honoured
     expect_error(with_capture(xtx.api::transition(
         start_clip = clip, audio = speech, output = nxt, fps = 30,
