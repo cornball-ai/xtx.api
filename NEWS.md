@@ -1,3 +1,15 @@
+# xtx.api 0.1.0.19
+
+* **`img_edit(backend = "flux3")`: a FLUX 3 Image Klein reference edit.** The
+  input goes in whole as the model's reference and the caption describes the
+  edited result ("the same Bigfoot from the reference image, now wearing a
+  vampire cape"). The pipeline loads once per device in bfloat16 with the VAE
+  encoder and is cached beside the SD ones. `size` caps the reference canvas,
+  `steps` defaults to 16 for this backend, and the support files come from
+  `options(xtx.flux3_support_dir)`, else the cached
+  `cornball-ai/flux3-klein-support` snapshot, else diffuseR's default. The
+  sidecar's `resolved` block records what ran.
+
 # xtx.api 0.1.0.18
 
 * **`transition()` gains `width`/`height` for landscape gpuhost output.** The
