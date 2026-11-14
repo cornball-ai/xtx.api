@@ -17,8 +17,11 @@
 #'
 #' @param image Character. Path to the input image file.
 #' @param prompt Character. The text description of the desired edit/transformation.
-#' @param backend Character. Which backend to use: "openai", "diffuser" or
-#'   "flux3".
+#' @param backend Character. Which backend to use: "openai", "diffuser",
+#'   "flux3" (FLUX 3 in this process) or "gpuhost" (the same edit on a
+#'   gpu.ctl host's \code{flux3-klein} entry, through
+#'   \code{options(xtx.gpuhost_base)}; \code{options(xtx.gpuhost_edit_entry)}
+#'   names another entry).
 #' @param model Character. Model to use. For OpenAI: "dall-e-2".
 #'   For diffuseR: "sd21", "sdxl". Ignored by flux3.
 #' @param mask Character or NULL. Path to mask image (OpenAI only).
@@ -27,10 +30,13 @@
 #' @param size Character. Output size. For OpenAI: "256x256", "512x512", "1024x1024".
 #'   For diffuseR: "512x512", "768x768", "1024x1024". For flux3 the
 #'   area cap the input is scaled to fit (its canvas is the output size),
-#'   so a 1024x1024 input at "512x512" is edited at 512x512.
+#'   so a 1024x1024 input at "512x512" is edited at 512x512. For gpuhost
+#'   the output size when given; left unset, the output is the
+#'   reference's size (within the entry's 1024x1024 bound).
 #' @param strength Numeric. Transformation strength 0-1 (diffuseR only). Default 0.8.
-#' @param steps Integer. Number of inference steps (diffuseR and flux3).
-#'   Default 50; flux3 is a distilled model and defaults to 16.
+#' @param steps Integer. Number of inference steps (diffuseR, flux3 and
+#'   gpuhost). Default 50; flux3 is a distilled model and defaults to 16,
+#'   and gpuhost leaves an unset count to the entry.
 #' @param guidance_scale Numeric. CFG scale (diffuseR only). Default 7.5.
 #' @param seed Integer or NULL. Random seed (diffuseR and flux3).
 #' @param devices Character or list. Device configuration (diffuseR and
@@ -38,6 +44,8 @@
 #' @param n Integer. Number of images to generate (OpenAI only).
 #' @param response_format Character. "url" or "b64_json" (OpenAI only).
 #' @param file Character or NULL. If provided, save the first result to this path.
+#' @param timeout Seconds to wait for a gpuhost reply (gpuhost only; at
+#'   least 300, since a swap can precede the edit).
 #'
 #' @return A list containing the generated image data.
 #'
@@ -68,11 +76,13 @@
 #' }
 #'
 #' @export
-img_edit <- function(image, prompt, backend = c("openai", "diffuser", "flux3"),
+img_edit <- function(image, prompt,
+                     backend = c("openai", "diffuser", "flux3", "gpuhost"),
                      model = NULL, mask = NULL, negative_prompt = NULL,
                      size = "1024x1024", strength = 0.8, steps = 50,
                      guidance_scale = 7.5, seed = NULL, devices = "cpu",
-                     n = 1, response_format = "url", file = NULL) {
+                     n = 1, response_format = "url", file = NULL,
+                     timeout = 300) {
     .sidecar_arm(environment(), "file")
     # Validate inputs
     if (!file.exists(image)) {
@@ -84,7 +94,14 @@ img_edit <- function(image, prompt, backend = c("openai", "diffuser", "flux3"),
 
     backend <- match.arg(backend)
 
-    if (backend == "flux3") {
+    if (backend == "gpuhost") {
+        # The entry's own defaults stand for what the caller did not say:
+        # its step count, and the reference's size for the output.
+        .img_edit_gpuhost(image = image, prompt = prompt,
+                          size = if (missing(size)) NULL else size,
+                          steps = if (missing(steps)) NULL else steps,
+                          seed = seed, file = file, timeout = timeout)
+    } else if (backend == "flux3") {
         .img_edit_flux3(image = image, prompt = prompt, size = size,
                         steps = if (missing(steps)) 16L else steps,
                         seed = seed, devices = devices, file = file)
@@ -303,6 +320,53 @@ img_edit <- function(image, prompt, backend = c("openai", "diffuser", "flux3"),
         return(NULL)
     }
     dirname(dirname(cfg))
+}
+
+#' Image edit on a gpu.ctl host
+#'
+#' The reference travels as \code{image_b64} to an entry whose generator
+#' edits (the fleet's \code{flux3-klein}, \code{options(xtx.gpuhost_edit_entry)}
+#' to name another) and the reply is PNG bytes, the same wire as
+#' \code{\link{tti}}'s gpuhost backend. The entry's own defaults stand for
+#' what the caller leaves NULL: its step count, and the reference's size
+#' for the output.
+#' @keywords internal
+.img_edit_gpuhost <- function(image, prompt, size = NULL, steps = NULL,
+                              seed = NULL, file = NULL, timeout = 300,
+                              entry = getOption("xtx.gpuhost_edit_entry",
+                                                "flux3-klein")) {
+    input <- .gpuhost_edit_input(image, prompt, size = size, steps = steps,
+                                 seed = seed)
+    # A swap can precede the work (the video row moves LTX off the card
+    # and FLUX 3 on, 45 s), then the edit itself is a minute or two.
+    out <- .gpuhost_infer(entry, input, timeout = max(timeout, 300))
+    path <- file %||% tempfile(fileext = ".png")
+    writeBin(out$content, path)
+    if (!is.null(file)) {
+        .sidecar_note(file, backend = "gpuhost", entry = entry)
+    }
+    list(data = list(list(image = path, revised_prompt = NULL)),
+         backend = "gpuhost", entry = entry, meta = out$meta)
+}
+
+# The edit request: the prompt, the reference's bytes, and only the
+# fields the caller set, so the entry's defaults decide the rest.
+.gpuhost_edit_input <- function(image, prompt, size = NULL, steps = NULL,
+                                seed = NULL) {
+    bytes <- readBin(image, "raw", file.size(image))
+    input <- list(prompt = prompt, image_b64 = jsonlite::base64_enc(bytes))
+    if (!is.null(size)) {
+        dims <- as.integer(strsplit(size, "x", fixed = TRUE)[[1]])
+        input$width <- dims[[1L]]
+        input$height <- dims[[2L]]
+    }
+    if (!is.null(steps)) {
+        input$steps <- as.integer(steps)
+    }
+    if (!is.null(seed)) {
+        input$seed <- as.integer(seed)
+    }
+    input
 }
 
 #' Create Image Variations

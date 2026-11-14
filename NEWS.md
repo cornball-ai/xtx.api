@@ -10,6 +10,13 @@
   `cornball-ai/flux3-klein-support` snapshot, else diffuseR's default. The
   sidecar's `resolved` block records what ran.
 
+* **`img_edit(backend = "gpuhost")`: the same edit on a gpu.ctl host.** The
+  reference travels as `image_b64` to the host's `flux3-klein` entry
+  (`options(xtx.gpuhost_edit_entry)` names another; gpu.ctl 0.1.0.45 or
+  later serves it) and PNG bytes come back, `tti()`'s gpuhost wire. An unset
+  `size` or `steps` is left to the entry: the output is the reference's
+  size and the model's own step count. `timeout` (300 s floor) is new.
+
 # xtx.api 0.1.0.18
 
 * **`transition()` gains `width`/`height` for landscape gpuhost output.** The

@@ -33,4 +33,22 @@ res <- support()
 expect_true(is.null(res) || dir.exists(res))
 
 options(xtx.flux3_support_dir = old)
-unlink(c(img, d), recursive = TRUE)
+
+# --- gpuhost: the request the edit sends ---
+edit_input <- xtx.api:::.gpuhost_edit_input
+png <- tempfile(fileext = ".png")
+bytes <- as.raw(c(0x89, 0x50, 0x4e, 0x47, 1, 2, 3))
+writeBin(bytes, png)
+inp <- edit_input(png, "a hat")
+expect_equal(names(inp), c("prompt", "image_b64"))
+expect_equal(jsonlite::base64_dec(inp$image_b64), bytes)
+inp <- edit_input(png, "a hat", size = "768x512", steps = 8, seed = 7)
+expect_equal(inp[c("width", "height", "steps", "seed")],
+             list(width = 768L, height = 512L, steps = 8L, seed = 7L))
+# no base configured: refused before anything is sent
+old_base <- getOption("xtx.gpuhost_base")
+options(xtx.gpuhost_base = NULL)
+expect_error(img_edit(png, "a hat", backend = "gpuhost"), pattern = "gpuhost")
+options(xtx.gpuhost_base = old_base)
+
+unlink(c(img, d, png), recursive = TRUE)
