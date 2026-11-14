@@ -22,7 +22,6 @@ expect_error(max_area("1024"), pattern = "WIDTHxHEIGHT")
 # --- support directory: the option wins, a missing cache is NULL ---
 support <- xtx.api:::.flux3_support_dir
 old <- getOption("xtx.flux3_support_dir")
-on.exit(options(xtx.flux3_support_dir = old), add = TRUE)
 d <- tempfile("support")
 dir.create(d)
 options(xtx.flux3_support_dir = d)
@@ -33,4 +32,5 @@ options(xtx.flux3_support_dir = NULL)
 res <- support()
 expect_true(is.null(res) || dir.exists(res))
 
+options(xtx.flux3_support_dir = old)
 unlink(c(img, d), recursive = TRUE)
