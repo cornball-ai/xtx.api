@@ -42,7 +42,9 @@ tti_base <- function(url) {
 #'   - "diffusers_api": HTTP API (Z-Image-Turbo, SD)
 #'   - "gpuhost": the viento-managed gpu.ctl service, which generates on
 #'     ITS card rather than in this process. Set
-#'     \code{options(xtx.gpuhost_base = "http://host:7878")}. Prefer this
+#'     \code{options(xtx.gpuhost_base = "http://host:7878")}, or the
+#'     \code{GPU_HOST_BASE} environment variable gpu.ctl reads (the key
+#'     likewise: \code{xtx.gpuhost_token} or \code{GPU_HOST_TOKEN}). Prefer this
 #'     on any machine where a gpu.ctl host is resident: the in-process
 #'     diffuseR backends compete with it for the same device.
 #'   - "auto": Use diffuseR if available, else openai

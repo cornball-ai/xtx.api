@@ -171,7 +171,8 @@ stv_available <- function(port = NULL, timeout = 2) {
 #'   "wan2gp_api" (HTTP API), "diffuseR" (LTX-2.3 in this process), or
 #'   "gpuhost" (LTX-2.3 on the viento-managed gpu.ctl service, on ITS
 #'   card rather than this one). For gpuhost set
-#'   \code{options(xtx.gpuhost_base = "http://host:7878")}; the entry name is
+#'   \code{options(xtx.gpuhost_base = "http://host:7878")} or the
+#'   \code{GPU_HOST_BASE} environment variable; the entry name is
 #'   the endpoint's (\code{xtx.gpuhost_video_entry}, default
 #'   \code{"ltx-2.3"}). Prefer it wherever a gpu.ctl host is resident: the
 #'   in-process backend competes with it for the same device.

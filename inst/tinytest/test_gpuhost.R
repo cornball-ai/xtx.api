@@ -8,12 +8,37 @@ library(tinytest)
 library(xtx.api)
 
 # ---- configuration refuses rather than guessing ---------------------
-old <- options(xtx.gpuhost_base = NULL)
+old <- options(xtx.gpuhost_base = NULL, xtx.gpuhost_token = NULL)
+old_env <- Sys.getenv(c("GPU_HOST_BASE", "GPU_HOST_TOKEN"), unset = NA)
+Sys.unsetenv(c("GPU_HOST_BASE", "GPU_HOST_TOKEN"))
 expect_error(xtx.api:::.gpuhost_base(), "xtx.gpuhost_base")
+expect_error(xtx.api:::.gpuhost_base(), "GPU_HOST_BASE")
 options(xtx.gpuhost_base = "http://example:7878/")
 ## a trailing slash would produce "//infer"
 expect_equal(xtx.api:::.gpuhost_base(), "http://example:7878")
+
+## gpu.ctl's environment variables are the fallback, never the override
+options(xtx.gpuhost_base = NULL)
+Sys.setenv(GPU_HOST_BASE = "http://router:7880/")
+expect_equal(xtx.api:::.gpuhost_base(), "http://router:7880")
+options(xtx.gpuhost_base = "http://example:7878")
+expect_equal(xtx.api:::.gpuhost_base(), "http://example:7878")
+
+expect_equal(xtx.api:::.gpuhost_token_path(),
+             path.expand("~/vto/gpuhost-ctl/gpuhost.token"))
+Sys.setenv(GPU_HOST_TOKEN = "/keys/batch.token")
+expect_equal(xtx.api:::.gpuhost_token_path(), "/keys/batch.token")
+options(xtx.gpuhost_token = "/keys/mine.token")
+expect_equal(xtx.api:::.gpuhost_token_path(), "/keys/mine.token")
+
 options(old)
+for (nm in names(old_env)) {
+    if (is.na(old_env[[nm]])) {
+        Sys.unsetenv(nm)
+    } else {
+        do.call(Sys.setenv, setNames(list(old_env[[nm]]), nm))
+    }
+}
 
 # ---- the entry is the endpoint's, not ours --------------------------
 expect_equal(xtx.api:::.gpuhost_entry("image"), "flux2-klein-4b")

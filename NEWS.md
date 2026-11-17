@@ -1,3 +1,12 @@
+# xtx.api 0.1.0.20
+
+* The gpuhost backend finds its host and key in gpu.ctl's environment
+  variables when the xtx options are unset: `GPU_HOST_BASE` after
+  `options(xtx.gpuhost_base)`, and `GPU_HOST_TOKEN` after
+  `options(xtx.gpuhost_token)`. A service whose unit already names the fleet
+  router and its key for gpu.ctl (the media bot's container) now reaches
+  the router through xtx.api too. The options still win.
+
 # xtx.api 0.1.0.19
 
 * **`img_edit(backend = "flux3")`: a FLUX 3 Image Klein reference edit.** The

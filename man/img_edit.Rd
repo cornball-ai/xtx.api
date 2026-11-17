@@ -30,7 +30,8 @@ img_edit(
 \item{backend}{Character. Which backend to use: "openai", "diffuser",
 "flux3" (FLUX 3 in this process) or "gpuhost" (the same edit on a
 gpu.ctl host's \code{flux3-klein} entry, through
-\code{options(xtx.gpuhost_base)}; \code{options(xtx.gpuhost_edit_entry)}
+\code{options(xtx.gpuhost_base)} or \code{GPU_HOST_BASE};
+\code{options(xtx.gpuhost_edit_entry)}
 names another entry).}
 
 \item{model}{Character. Model to use. For OpenAI: "dall-e-2".
