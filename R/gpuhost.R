@@ -21,21 +21,41 @@
 # the GPU again, and two different requests can never collide the way a
 # constant or per-call-random key allows.
 
+# WHERE THE HOST IS, AND WHICH KEY TO USE. The xtx options first, then the
+# GPU_HOST_BASE / GPU_HOST_TOKEN environment variables, which are gpu.ctl's
+# client settings: a service unit that already names the fleet router and
+# its key for gpu.ctl configures this backend with the same two lines,
+# instead of needing R options that nothing in a container sets.
 .gpuhost_base <- function() {
     b <- getOption("xtx.gpuhost_base")
     if (is.null(b) || !nzchar(b)) {
-        stop("set options(xtx.gpuhost_base = \"http://host:7878\") before ",
-             "using the gpuhost backend", call. = FALSE)
+        b <- Sys.getenv("GPU_HOST_BASE", "")
+    }
+    if (!nzchar(b)) {
+        stop("set options(xtx.gpuhost_base = \"http://host:7878\") or the ",
+             "GPU_HOST_BASE environment variable before using the gpuhost ",
+             "backend", call. = FALSE)
     }
     sub("/+$", "", b)
 }
 
+.gpuhost_token_path <- function() {
+    p <- getOption("xtx.gpuhost_token")
+    if (is.null(p) || !nzchar(p)) {
+        p <- Sys.getenv("GPU_HOST_TOKEN", "")
+    }
+    if (!nzchar(p)) {
+        p <- "~/vto/gpuhost-ctl/gpuhost.token"
+    }
+    path.expand(p)
+}
+
 .gpuhost_bearer <- function() {
-    p <- path.expand(getOption("xtx.gpuhost_token",
-                               "~/vto/gpuhost-ctl/gpuhost.token"))
+    p <- .gpuhost_token_path()
     if (!file.exists(p)) {
         stop("gpuhost token file not found at ", p,
-             "; set options(xtx.gpuhost_token = ...)", call. = FALSE)
+             "; set options(xtx.gpuhost_token = ...) or GPU_HOST_TOKEN",
+             call. = FALSE)
     }
     jsonlite::base64_enc(readBin(p, "raw", file.size(p)))
 }
